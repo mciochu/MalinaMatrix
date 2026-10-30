@@ -1,0 +1,31 @@
+[Unit]
+Description=Malina Matrix LED Clock
+Documentation=https://github.com/mciochu/MalinaMatrix
+After=network-online.target systemd-modules-load.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+SupplementaryGroups=@SUPPLEMENTARY_GROUPS@
+WorkingDirectory=@APP_DIR@
+Environment=PYTHONUNBUFFERED=1
+Environment=ZEGAR_CONFIG_PATH=@APP_DIR@/zegar.conf
+ExecStartPre=+/usr/sbin/modprobe spi_bcm2835
+ExecStartPre=+/usr/sbin/modprobe spidev
+ExecStart=@APP_DIR@/.venv/bin/python @APP_DIR@/zegar.py
+Restart=always
+RestartSec=2
+TimeoutStopSec=5
+KillSignal=SIGTERM
+UMask=0027
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=@APP_DIR@
+
+[Install]
+WantedBy=multi-user.target

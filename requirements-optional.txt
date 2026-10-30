@@ -1,0 +1,8 @@
+# Install only the optional hardware or feature dependencies you use.
+
+# Alternative CircuitPython sensor backends (SHT31 / DHT22)
+adafruit-circuitpython-sht31d>=2.0
+adafruit-circuitpython-dht>=4.0
+
+# Experimental Bluetooth audio visualizer
+numpy>=1.24

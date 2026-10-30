@@ -1,0 +1,946 @@
+[Reading 942 lines from start (total: 942 lines, 0 remaining)]
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Domowa stacja pogodowa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#080e19">
+    <meta name="description" content="Domowa stacja pomiarowa BME280 — aktualne odczyty i historia temperatury, wilgotności oraz ciśnienia.">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #080e19; --surface: rgba(17,27,44,.9); --border: rgba(166,190,224,.12);
+            --text: #eef4ff; --muted: #8d9db6; --temp: #ff8a65; --hum: #60b7ff;
+            --press: #6ee7b7; --accent: #8ba8ff;
+        }
+        * { box-sizing: border-box; }
+        html { min-height: 100%; background: var(--bg); }
+        body {
+            margin: 0; min-height: 100vh;
+            padding: max(18px,env(safe-area-inset-top)) 18px max(26px,env(safe-area-inset-bottom));
+            font-family: Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+            color: var(--text);
+            background: radial-gradient(ellipse at 10% -5%,rgba(56,111,190,.22),transparent 40%),
+                        radial-gradient(ellipse at 100% 20%,rgba(48,119,135,.12),transparent 33%),var(--bg);
+            -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+        }
+        button,input { font: inherit; }
+        button { -webkit-tap-highlight-color: transparent; }
+        .container { width: min(100%,1060px); margin: 0 auto; }
+        .page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:4px 2px 24px; }
+        .brand { display:flex; gap:13px; align-items:center; min-width:0; }
+        .brand-mark {
+            width:48px; height:48px; flex:0 0 48px; display:grid; place-items:center;
+            border:1px solid rgba(139,168,255,.28); border-radius:16px; color:#c9d6ff;
+            background:linear-gradient(145deg,rgba(84,125,211,.27),rgba(22,39,65,.72));
+            box-shadow:inset 0 1px rgba(255,255,255,.07),0 8px 26px rgba(0,0,0,.16);
+        }
+        .brand-mark svg { width:25px; height:25px; }
+        .eyebrow { color:#9bb1d5; font-size:.68rem; font-weight:750; letter-spacing:.16em; text-transform:uppercase; margin-bottom:5px; }
+        h1 { margin:0; font-size:clamp(1.45rem,4vw,2.05rem); line-height:1.15; letter-spacing:-.045em; font-weight:760; }
+        .subtitle { margin:7px 0 0; color:var(--muted); font-size:.88rem; }
+        .sensor-pill {
+            display:inline-flex; align-items:center; gap:8px; flex:0 0 auto; padding:9px 12px;
+            border:1px solid var(--border); border-radius:999px; background:rgba(17,27,44,.7);
+            color:#bdcce4; font-size:.76rem; font-weight:650; white-space:nowrap;
+        }
+        .sensor-dot { width:7px; height:7px; background:#8ba8ff; border-radius:50%; box-shadow:0 0 12px rgba(139,168,255,.35); }
+        .section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:0 2px 13px; }
+        .section-heading h2 { margin:0; font-size:1rem; letter-spacing:-.02em; }
+        .section-heading p { margin:5px 0 0; color:var(--muted); font-size:.78rem; }
+        .stats-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:13px; margin-bottom:25px; }
+        .stat-card {
+            position:relative; min-width:0; overflow:hidden; padding:20px; border-radius:22px;
+            border:1px solid var(--border); background:var(--surface);
+            box-shadow:0 10px 28px rgba(0,0,0,.12),inset 0 1px rgba(255,255,255,.035);
+            transition:border-color .2s,transform .2s;
+        }
+        .stat-card:hover { border-color:rgba(166,190,224,.25); transform:translateY(-2px); }
+        .stat-card::after { content:""; position:absolute; width:100px; height:100px; right:-40px; bottom:-55px; border-radius:50%; background:var(--glow); filter:blur(3px); pointer-events:none; }
+        .stat-card.temp { --tone:var(--temp); --glow:rgba(255,138,101,.12); }
+        .stat-card.hum { --tone:var(--hum); --glow:rgba(96,183,255,.11); }
+        .stat-card.press { --tone:var(--press); --glow:rgba(110,231,183,.1); }
+        .stat-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .stat-label { color:#a9b8cd; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; }
+        .stat-icon { display:grid; place-items:center; width:37px; height:37px; flex:0 0 37px; border-radius:12px; background:color-mix(in srgb,var(--tone) 13%,transparent); color:var(--tone); }
+        .stat-icon svg { width:20px; height:20px; }
+        .stat-val { position:relative; z-index:1; margin-top:18px; color:#f6f8ff; font-size:clamp(1.75rem,3vw,2.4rem); line-height:1.1; font-weight:760; letter-spacing:-.055em; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .stat-card.temp .stat-val { font-size:clamp(2.2rem,4vw,3rem); }
+        .stat-note { position:relative; z-index:1; margin-top:9px; color:#8092ab; font-size:.76rem; }
+        .chart-section { margin-top:27px; }
+        .chart-section-heading { margin-bottom:12px; }
+        .chart-section-heading h2 { font-size:1.18rem; }
+        .range-wrap { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:15px; }
+        .range-caption { color:#8d9db6; font-size:.8rem; font-weight:650; }
+        .range-selector { display:flex; align-items:center; flex-wrap:wrap; gap:5px; padding:5px; border:1px solid var(--border); border-radius:15px; background:rgba(17,27,44,.78); }
+        .range-btn { min-height:38px; padding:8px 15px; border:1px solid transparent; border-radius:10px; background:transparent; color:#94a4bc; font-size:.82rem; font-weight:650; cursor:pointer; white-space:nowrap; user-select:none; transition:background .18s,color .18s,border-color .18s; }
+        .range-btn:hover { color:var(--text); background:rgba(255,255,255,.045); }
+        .range-btn.active { background:#dbe6ff; color:#15233d; border-color:#dbe6ff; box-shadow:0 3px 10px rgba(0,0,0,.12); }
+        .card { min-width:0; margin-bottom:14px; padding:19px 20px 16px; border:1px solid var(--border); border-radius:21px; background:var(--surface); box-shadow:0 10px 28px rgba(0,0,0,.12); }
+        .chart-card-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 14px; }
+        .chart-name { display:flex; align-items:center; gap:10px; font-size:.94rem; font-weight:740; letter-spacing:-.015em; }
+        .chart-mark { width:9px; height:9px; border-radius:50%; background:var(--chart-tone); box-shadow:0 0 14px color-mix(in srgb,var(--chart-tone) 50%,transparent); }
+        .chart-unit { color:#9eafc6; padding:5px 9px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.025); font-size:.76rem; font-weight:700; }
+        .chart-scroll { overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:#364860 transparent; position:relative; border-radius:10px; }
+        .chart-scroll::-webkit-scrollbar { height:4px; }
+        .chart-scroll::-webkit-scrollbar-thumb { background:#364860; border-radius:99px; }
+        .chart-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
+        .chart-stat { min-width:0; padding:10px 12px; border:1px solid rgba(166,190,224,.085); border-radius:12px; background:rgba(7,14,25,.38); }
+        .chart-stat-label { display:block; color:#8193ad; font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.085em; }
+        .chart-stat-value { display:block; margin-top:5px; color:#eaf0fb; font-size:.92rem; font-weight:750; letter-spacing:-.025em; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .chart-container { position:relative; height:245px; width:100%; }
+        .display-test-card { margin-top:18px; padding:18px; border:1px solid var(--border); border-radius:20px; background:linear-gradient(145deg,rgba(22,34,54,.92),rgba(12,20,34,.96)); box-shadow:0 12px 30px rgba(0,0,0,.13); }
+        .display-test-head { display:flex; align-items:center; gap:11px; margin-bottom:8px; }
+        .display-test-icon { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; border-radius:13px; color:#a5baff; background:rgba(139,168,255,.12); }
+        .display-test-icon svg { width:21px; height:21px; }
+        .display-test-title { margin:0; color:var(--text); font-size:.98rem; font-weight:750; }
+        .display-test-copy { margin:3px 0 14px; color:var(--muted); font-size:.82rem; line-height:1.5; }
+        .display-test-controls { display:flex; gap:9px; align-items:stretch; }
+        .display-test-select { flex:1; min-width:0; min-height:44px; padding:10px 12px; color:var(--text); background:#101a2b; border:1px solid var(--border); border-radius:12px; font:inherit; }
+        .display-test-btn { min-height:44px; padding:10px 15px; border:1px solid rgba(139,168,255,.35); border-radius:12px; background:linear-gradient(135deg,#8ba8ff,#6e89e8); color:#0a1425; font:inherit; font-size:.84rem; font-weight:800; cursor:pointer; }
+        .display-test-btn.active { color:#f3f6ff; background:rgba(139,168,255,.13); border-color:rgba(139,168,255,.45); }
+        .display-test-btn:disabled { opacity:.65; cursor:wait; }
+        .display-test-status { min-height:18px; margin-top:10px; color:var(--muted); font-size:.76rem; line-height:1.4; }
+        .display-test-status.active { color:#a9c0ff; }
+        .lamp-card { margin-top:18px; padding:18px; border:1px solid rgba(255,218,130,.18); border-radius:20px; background:linear-gradient(145deg,rgba(50,41,25,.62),rgba(18,25,37,.96)); box-shadow:0 12px 30px rgba(0,0,0,.13); }
+        .lamp-head { display:flex; align-items:center; gap:11px; margin-bottom:8px; }
+        .lamp-icon { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; border-radius:13px; color:#ffd98a; background:rgba(255,205,104,.12); }
+        .lamp-icon svg { width:22px; height:22px; }
+        .lamp-title { margin:0; color:var(--text); font-size:.98rem; font-weight:750; }
+        .lamp-copy { margin:3px 0 14px; color:var(--muted); font-size:.82rem; line-height:1.5; }
+        .lamp-toggle { width:100%; min-height:48px; padding:12px 16px; border:1px solid rgba(255,218,130,.42); border-radius:13px; background:linear-gradient(135deg,#ffe4a3,#f4bd5b); color:#281b08; font-size:.9rem; font-weight:850; cursor:pointer; transition:filter .18s,background .18s; }
+        .lamp-toggle.active { color:#ffe8b8; background:rgba(255,205,104,.12); border-color:rgba(255,218,130,.38); }
+        .lamp-toggle:disabled { opacity:.65; cursor:wait; }
+        .lamp-control { margin-top:15px; }
+        .lamp-control-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; color:#c6d2e4; font-size:.82rem; font-weight:700; }
+        .lamp-control output { color:#ffe1a0; font-variant-numeric:tabular-nums; }
+        .lamp-range { width:100%; height:28px; margin:0; accent-color:#f4bd5b; cursor:pointer; }
+        .lamp-hint { margin-top:5px; color:#8292a9; font-size:.72rem; line-height:1.4; }
+        .lamp-status { min-height:18px; margin-top:10px; color:var(--muted); font-size:.76rem; line-height:1.4; }
+        .lamp-status.active { color:#ffe1a0; }
+        .msg-card { margin-top:20px; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:19px; background:rgba(17,27,44,.78); }
+        .msg-panel-toggle { display:flex; align-items:center; gap:11px; width:100%; padding:17px 18px; cursor:pointer; color:#dbe6fa; font-size:.9rem; font-weight:680; user-select:none; transition:background .18s; }
+        .msg-panel-toggle:hover { background:rgba(255,255,255,.035); }
+        .msg-panel-toggle .msg-icon { width:36px; height:36px; display:grid; place-items:center; flex:0 0 36px; border-radius:11px; color:#a8c0ff; background:rgba(139,168,255,.13); }
+        .msg-panel-toggle .msg-icon svg { width:19px; height:19px; }
+        .msg-panel-toggle .arrow { margin-left:auto; color:#94a4bc; font-size:.75rem; transition:transform .2s; }
+        .msg-panel-toggle.open .arrow { transform:rotate(90deg); }
+        .msg-panel { display:none; padding:0 18px 18px; }
+        .msg-panel.visible { display:block; }
+        .msg-row { display:flex; gap:9px; align-items:center; }
+        .msg-input { flex:1; min-width:0; min-height:46px; padding:11px 13px; border:1px solid #304058; border-radius:12px; outline:none; background:#0b1422; color:var(--text); font-size:16px; transition:border-color .18s,box-shadow .18s; }
+        .msg-input:focus { border-color:#8ba8ff; box-shadow:0 0 0 3px rgba(139,168,255,.12); }
+        .msg-input::placeholder { color:#687991; }
+        .msg-send-btn { min-height:46px; padding:11px 18px; border:0; border-radius:12px; color:#13213a; background:#c4d4ff; font-size:.88rem; font-weight:800; cursor:pointer; white-space:nowrap; transition:filter .18s,transform .18s; }
+        .msg-send-btn:hover { filter:brightness(1.05); }
+        .msg-send-btn:active { transform:scale(.98); }
+        .msg-send-btn:disabled { background:#3b485d; color:#9aa9bd; cursor:not-allowed; }
+        .msg-status { margin-top:9px; font-size:.82rem; min-height:1.2em; color:#9eafc6; }
+        .msg-status.ok { color:#6ee7b7; }
+        .msg-status.err { color:#ff9e91; }
+        .footer { text-align:center; color:#667991; font-size:.76rem; margin-top:28px; padding:0 0 10px; letter-spacing:.025em; }
+        button:focus-visible,.msg-panel-toggle:focus-visible { outline:2px solid #b8cbff; outline-offset:3px; }
+        @media (min-width:900px) { .card { padding:21px 23px 17px; } }
+        @media (max-width:650px) {
+            body { padding:max(14px,env(safe-area-inset-top)) 13px max(22px,env(safe-area-inset-bottom)); }
+            .page-header { align-items:flex-start; margin:2px 2px 21px; gap:8px; }
+            .brand { gap:10px; }
+            .brand-mark { width:42px; height:42px; flex-basis:42px; border-radius:14px; }
+            .brand-mark svg { width:22px; height:22px; }
+            .eyebrow { font-size:.6rem; letter-spacing:.13em; }
+            h1 { font-size:1.48rem; }
+            .subtitle { margin-top:5px; font-size:.77rem; line-height:1.4; }
+            .sensor-pill { gap:6px; padding:7px 9px; font-size:.68rem; }
+            .stats-grid { grid-template-columns:1fr 1fr; gap:10px; margin-bottom:23px; }
+            .stat-card { padding:15px 14px; border-radius:18px; }
+            .stat-card.temp { grid-column:1 / -1; }
+            .stat-card.temp .stat-val { margin-top:12px; font-size:2.65rem; }
+            .stat-card.temp .stat-icon { width:40px; height:40px; }
+            .stat-card:not(.temp) .stat-top { align-items:flex-start; }
+            .stat-card:not(.temp) .stat-label { font-size:.66rem; letter-spacing:.065em; }
+            .stat-card:not(.temp) .stat-icon { width:32px; height:32px; flex-basis:32px; border-radius:10px; }
+            .stat-card:not(.temp) .stat-icon svg { width:17px; height:17px; }
+            .stat-card:not(.temp) .stat-val { margin-top:15px; font-size:clamp(1.3rem,5.2vw,1.75rem); letter-spacing:-.045em; }
+            .stat-note { font-size:.69rem; line-height:1.4; margin-top:7px; }
+            .section-heading { margin-bottom:11px; }
+            .range-wrap { display:block; margin-bottom:12px; }
+            .range-caption { margin:0 0 8px 2px; }
+            .range-selector { width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:3px; border-radius:14px; padding:4px; }
+            .range-btn { min-width:0; min-height:40px; padding:8px 4px; border-radius:10px; font-size:.76rem; }
+            .chart-section { margin-top:23px; }
+            .chart-section-heading h2 { font-size:1.05rem; }
+            .card { padding:15px 12px 12px; margin-bottom:11px; border-radius:18px; }
+            .chart-card-heading { margin:0 2px 10px; }
+            .chart-stat-grid { gap:6px; margin-bottom:10px; }
+            .chart-stat { padding:9px 8px; border-radius:10px; }
+            .chart-stat-label { font-size:.61rem; letter-spacing:.055em; }
+            .chart-stat-value { font-size:.78rem; margin-top:5px; }
+            .chart-container { height:210px; }
+            .chart-scroll { overflow-x:hidden; }
+            #container-temp,#container-hum,#container-press { width:100% !important; min-width:100% !important; }
+            .display-test-card { margin-top:14px; padding:14px 12px; border-radius:17px; }
+            .lamp-card { margin-top:14px; padding:14px 12px; border-radius:17px; }
+            .lamp-toggle { min-height:46px; }
+            .display-test-controls { flex-direction:column; }
+            .display-test-select,.display-test-btn { width:100%; min-height:44px; }
+            .msg-card { margin-top:17px; border-radius:17px; }
+            .msg-panel-toggle { padding:14px; font-size:.86rem; }
+            .msg-panel { padding:0 13px 14px; }
+            .msg-row { align-items:stretch; }
+            .msg-send-btn { padding:10px 15px; }
+            .footer { margin-top:23px; }
+        }
+        @media (max-width:380px) {
+            .sensor-pill { font-size:0; gap:0; padding:9px; }
+            .sensor-dot { width:8px; height:8px; }
+            .stat-card { padding:13px 11px; }
+            .stat-card:not(.temp) .stat-label { font-size:.61rem; }
+            .stat-card:not(.temp) .stat-val { font-size:1.25rem; }
+            .msg-row { flex-direction:column; }
+            .msg-send-btn { width:100%; }
+        }
+        @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 14.8V5a3 3 0 0 0-6 0v9.8a5 5 0 1 0 6 0Z"/><path d="M11 11v7"/><path d="M17 5h3M17 9h2"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="eyebrow">DOMOWA STACJA · BME280</div>
+                    <h1>Warunki na żywo</h1>
+                    <p class="subtitle">Temperatura, wilgotność i ciśnienie</p>
+                </div>
+            </div>
+            <div class="sensor-pill"><span class="sensor-dot"></span> BME280</div>
+        </header>
+
+        <section aria-label="Aktualne pomiary">
+            <div class="section-heading"><div><h2>Aktualne odczyty</h2><p>Ostatnie zapisane wartości</p></div></div>
+            <div class="stats-grid">
+                <div class="stat-card temp">
+                    <div class="stat-top">
+                        <div class="stat-label">Temperatura</div>
+                        <div class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a3 3 0 0 0-6 0v9.8a5 5 0 1 0 6 0Z"/><path d="M11 11v7"/></svg></div>
+                    </div>
+                    <div class="stat-val" id="curr-temp">--</div><div class="stat-note">Odczyt z czujnika</div>
+                </div>
+                <div class="stat-card hum">
+                    <div class="stat-top">
+                        <div class="stat-label">Wilgotność</div>
+                        <div class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5S5.5 11 5.5 15.1a6.5 6.5 0 0 0 13 0C18.5 11 12 3.5 12 3.5Z"/><path d="M9 16a3 3 0 0 0 3 3"/></svg></div>
+                    </div>
+                    <div class="stat-val" id="curr-hum">--</div><div class="stat-note">Wilgotność względna</div>
+                </div>
+                <div class="stat-card press">
+                    <div class="stat-top">
+                        <div class="stat-label">Ciśnienie</div>
+                        <div class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 12 16 8"/><path d="M8 16h8"/></svg></div>
+                    </div>
+                    <div class="stat-val" id="curr-press">--</div><div class="stat-note">Ciśnienie atmosferyczne</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="chart-section" aria-label="Historia pomiarów">
+            <div class="section-heading chart-section-heading"><div><h2>Historia pomiarów</h2><p>Przeglądaj zmiany w czasie</p></div></div>
+            <div class="range-wrap">
+                <div class="range-caption">Pokaż okres</div>
+                <div class="range-selector" id="range-selector">
+                    <button class="range-btn" data-range="24h">24 godz.</button>
+                    <button class="range-btn" data-range="3d">3 dni</button>
+                    <button class="range-btn" data-range="7d">7 dni</button>
+                    <button class="range-btn active" data-range="30d">30 dni</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="chart-card-heading"><div class="chart-name"><span class="chart-mark" style="--chart-tone:var(--temp)"></span>Temperatura</div><span class="chart-unit">°C</span></div>
+                <div class="chart-stat-grid" aria-label="Statystyki temperatury w wybranym okresie">
+                    <div class="chart-stat"><span class="chart-stat-label">Minimum</span><strong class="chart-stat-value" id="temp-min">--</strong></div>
+                    <div class="chart-stat"><span class="chart-stat-label">Średnia</span><strong class="chart-stat-value" id="temp-avg">--</strong></div>
+                    <div class="chart-stat"><span class="chart-stat-label">Maksimum</span><strong class="chart-stat-value" id="temp-max">--</strong></div>
+                </div>
+                <div class="chart-scroll" id="scroll-temp"><div class="chart-container" id="container-temp"><canvas id="tempChart"></canvas></div></div>
+            </div>
+            <div class="card">
+                <div class="chart-card-heading"><div class="chart-name"><span class="chart-mark" style="--chart-tone:var(--hum)"></span>Wilgotność</div><span class="chart-unit">%</span></div>
+                <div class="chart-stat-grid" aria-label="Statystyki wilgotności w wybranym okresie">
+                    <div class="chart-stat"><span class="chart-stat-label">Minimum</span><strong class="chart-stat-value" id="hum-min">--</strong></div>
+                    <div class="chart-stat"><span class="chart-stat-label">Średnia</span><strong class="chart-stat-value" id="hum-avg">--</strong></div>
+                    <div class="chart-stat"><span class="chart-stat-label">Maksimum</span><strong class="chart-stat-value" id="hum-max">--</strong></div>
+                </div>
+                <div class="chart-scroll" id="scroll-hum"><div class="chart-container" id="container-hum"><canvas id="humChart"></canvas></div></div>
+            </div>
+            <div class="card">
+                <div class="chart-card-heading"><div class="chart-name"><span class="chart-mark" style="--chart-tone:var(--press)"></span>Ciśnienie</div><span class="chart-unit">hPa</span></div>
+                <div class="chart-stat-grid" aria-label="Statystyki ciśnienia w wybranym okresie">
+                    <div class="chart-stat"><span class="chart-stat-label">Minimum</span><strong class="chart-stat-value" id="press-min">--</strong></div>
+                    <div class="chart-stat"><span class="chart-stat-label">Średnia</span><strong class="chart-stat-value" id="press-avg">--</strong></div>
+                    <div class="chart-stat"><span class="chart-stat-label">Maksimum</span><strong class="chart-stat-value" id="press-max">--</strong></div>
+                </div>
+                <div class="chart-scroll" id="scroll-press"><div class="chart-container" id="container-press"><canvas id="pressChart"></canvas></div></div>
+            </div>
+        </section>
+
+        <section class="display-test-card" aria-label="Test wyświetlacza zegara">
+            <div class="display-test-head">
+                <div class="display-test-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8h3v3H7zM14 8h3M14 11h3M7 15h10"/></svg>
+                </div>
+                <div><h2 class="display-test-title">Test wyświetlacza</h2><p class="subtitle">Ręcznie sprawdź jeden z dziennych ekranów.</p></div>
+            </div>
+            <p class="display-test-copy">Przetestuj ekran dzienny w nocy albo nocny w dzień. Test wymusza wybrany widok niezależnie od godziny. Po wyłączeniu wróci automatyczny harmonogram.</p>
+            <div class="display-test-controls">
+                <select class="display-test-select" id="display-test-mode" aria-label="Wybierz tryb wyświetlacza">
+                    <option value="temp">Dzienny — temperatura</option>
+                    <option value="hum">Dzienny — wilgotność</option>
+                    <option value="press">Dzienny — ciśnienie</option>
+                    <option value="weather">Dzienny — pogoda</option>
+                    <option value="night">Nocny — tylko godzina</option>
+                </select>
+                <button type="button" class="display-test-btn" id="display-test-toggle" aria-pressed="false">Włącz test</button>
+            </div>
+            <div class="display-test-status" id="display-test-status" role="status" aria-live="polite">Automatyczny cykl działa normalnie.</div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+                <label for="weather-display-style" style="display:block;margin-bottom:8px;color:#bdcce4;font-size:.82rem;font-weight:700">Wygląd planszy pogody</label>
+                <select class="display-test-select" id="weather-display-style" aria-label="Wygląd planszy pogody">
+                    <option value="letters">Skrót tekstowy (3 litery)</option>
+                    <option value="icon">Ikona pogody 8×8</option>
+                </select>
+                <div class="display-test-status" id="weather-style-status" role="status" aria-live="polite">Aktualny wygląd planszy pogody.</div>
+            </div>
+        </section>
+
+        <section class="lamp-card" aria-label="Lampka matrycy LED">
+            <div class="lamp-head">
+                <div class="lamp-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M8.2 14.5a7 7 0 1 1 7.6 0c-.8.5-1.3 1.2-1.5 2H9.7c-.2-.8-.7-1.5-1.5-2Z"/><path d="M12 2v2M4.9 4.9l1.4 1.4M2 12h2M20 12h2M17.7 6.3l1.4-1.4"/></svg>
+                </div>
+                <div><h2 class="lamp-title">Lampka LED</h2><p class="subtitle">Zmień całą matrycę w regulowane źródło światła.</p></div>
+            </div>
+            <p class="lamp-copy">Uruchamia się wyłącznie po kliknięciu. Jasność reguluje moc świecenia sterowników, a gęstość pikseli pozwala stopniowo wygaszać punkty LED.</p>
+            <button type="button" class="lamp-toggle" id="lamp-toggle" aria-pressed="false">Włącz lampkę</button>
+            <div class="lamp-control">
+                <div class="lamp-control-top"><label for="lamp-brightness">Jasność świecenia</label><output id="lamp-brightness-value" for="lamp-brightness">100%</output></div>
+                <input class="lamp-range" type="range" id="lamp-brightness" min="0" max="100" step="1" value="100">
+                <div class="lamp-hint">Regulacja sprzętowa MAX7219 — 16 poziomów.</div>
+            </div>
+            <div class="lamp-control">
+                <div class="lamp-control-top"><label for="lamp-density">Gęstość świecących pikseli</label><output id="lamp-density-value" for="lamp-density">100%</output></div>
+                <input class="lamp-range" type="range" id="lamp-density" min="0" max="100" step="1" value="100">
+                <div class="lamp-hint">Mniejsza wartość wygasza część diod we wzorze punktowym.</div>
+            </div>
+            <div class="lamp-status" id="lamp-status" role="status" aria-live="polite">Lampka wyłączona. Zegar działa normalnie.</div>
+        </section>
+
+        <section class="lamp-card" aria-label="Wizualizator muzyki Bluetooth" style="border-color:rgba(139,168,255,.2);background:linear-gradient(145deg,rgba(25,38,66,.78),rgba(12,20,34,.96))">
+            <div class="lamp-head">
+                <div class="lamp-icon" aria-hidden="true" style="color:#a9c0ff;background:rgba(139,168,255,.12)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 17 17 12 21V3l5 4-10 10"/><path d="M3 9l14 10M3 15 17 5"/></svg>
+                </div>
+                <div><h2 class="lamp-title">Wizualizator muzyki</h2><p class="subtitle">Bluetooth audio · urządzenie: Malina</p></div>
+            </div>
+            <p class="lamp-copy">Sparuj telefon z urządzeniem <strong>Malina</strong> i wybierz je jako wyjście audio. Gdy zacznie płynąć muzyka, matryca automatycznie pokaże widmo dźwięku. Malina nie odtwarza dźwięku na głośniku.</p>
+            <div class="lamp-status" id="audio-status" role="status" aria-live="polite">Uruchamiam odbiornik Bluetooth…</div>
+        </section>
+
+        <section class="msg-card" aria-label="Wiadomość na zegar">
+            <div class="msg-panel-toggle" id="msg-toggle">
+                <span class="msg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m7 10 3 2 3-2M7 14h10"/></svg></span>
+                <span>Wyślij tekst na wyświetlacz</span><span class="arrow">▶</span>
+            </div>
+            <div class="msg-panel" id="msg-panel">
+                <div class="msg-row"><input type="text" class="msg-input" id="msg-input" placeholder="Wpisz wiadomość..." maxlength="100" aria-label="Tekst do wyświetlenia"><button class="msg-send-btn" id="msg-send">Wyślij</button></div>
+                <div class="msg-status" id="msg-status" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <footer class="footer" id="app-footer"></footer>
+    </div>
+
+    <script>
+        // ==========================================
+        // KONFIGURACJA
+        const WERSJA_STRONY = "v1.4.0";
+        const PX_PER_POINT = 7;        // szerokość w px na 1 punkt danych
+        const MIN_CHART_WIDTH = 300;   // minimalna szerokość canvasu
+        document.getElementById('app-footer').innerText = `Panel BME280 | Wersja: ${WERSJA_STRONY}`;
+        // ==========================================
+
+        let tempChartInst = null;
+        let humChartInst = null;
+        let pressChartInst = null;
+        let allData = [];              // pełne dane z data.json
+        let currentRange = '30d';      // domyślnie ostatnie 30 dni
+        let userScrolledAway = false;  // czy użytkownik ręcznie przewinął wykres
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            if (isNaN(date)) return timestamp;
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}.${month} ${hours}:${minutes}`;
+        }
+
+        // --- FILTROWANIE ZAKRESU CZASU ---
+        function applyRangeFilter(data) {
+            if (!data || data.length === 0) return [];
+            const now = new Date(data[data.length - 1].timestamp).getTime();
+            let cutoff;
+
+            switch (currentRange) {
+                case '24h': cutoff = now - 24 * 60 * 60 * 1000; break;
+                case '3d':  cutoff = now - 3 * 24 * 60 * 60 * 1000; break;
+                case '7d':  cutoff = now - 7 * 24 * 60 * 60 * 1000; break;
+                case '30d': cutoff = now - 30 * 24 * 60 * 60 * 1000; break;
+                default:    return data; // pełny dostępny zakres
+            }
+            return data.filter(r => new Date(r.timestamp).getTime() >= cutoff);
+        }
+
+        // --- OBLICZANIE SZEROKOŚCI CANVASU ---
+        function setChartWidth(containerId, pointCount) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const width = Math.max(MIN_CHART_WIDTH, pointCount * PX_PER_POINT);
+            container.style.minWidth = width + 'px';
+            container.style.width = width + 'px';
+        }
+
+        // --- ZARZĄDZANIE WSKAŹNIKIEM FADE ---
+        function updateScrollFade(scrollEl) {
+            if (!scrollEl) return;
+            const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth;
+            if (maxScroll <= 1) {
+                scrollEl.classList.add('scrolled-end');
+            } else {
+                const atEnd = scrollEl.scrollLeft >= maxScroll - 2;
+                scrollEl.classList.toggle('scrolled-end', atEnd);
+            }
+        }
+
+        function setupScrollSync() {
+            const scrolls = [
+                document.getElementById('scroll-temp'),
+                document.getElementById('scroll-hum'),
+                document.getElementById('scroll-press')
+            ].filter(Boolean);
+
+            let syncing = false;
+
+            scrolls.forEach(scroll => {
+                updateScrollFade(scroll);
+                scroll.addEventListener('scroll', () => {
+                    updateScrollFade(scroll);
+                    if (syncing) return;
+                    syncing = true;
+                    const left = scroll.scrollLeft;
+                    scrolls.forEach(s => {
+                        if (s !== scroll) s.scrollLeft = left;
+                    });
+
+                    // Wykryj, czy użytkownik odszedł od końca
+                    const maxScroll = scroll.scrollWidth - scroll.clientWidth;
+                    if (maxScroll > 1 && left < maxScroll - 30) {
+                        userScrolledAway = true;
+                    } else if (left >= maxScroll - 5) {
+                        userScrolledAway = false;
+                    }
+
+                    requestAnimationFrame(() => { syncing = false; });
+                }, { passive: true });
+            });
+
+            window.addEventListener('resize', () => {
+                scrolls.forEach(s => updateScrollFade(s));
+            });
+        }
+
+        // --- PLUGIN DO KOLOROWANIA DNI ---
+        const daySeparatorPlugin = {
+            id: 'daySeparator',
+            beforeDraw: (chart) => {
+                const { ctx, chartArea, scales: { x } } = chart;
+                if (!chartArea) return;
+                ctx.save();
+                const labels = chart.data.labels;
+                if (!labels || labels.length === 0) { ctx.restore(); return; }
+
+                let currentDay = labels[0].substring(0, 5);
+                let startX = x.getPixelForValue(0);
+                let colorIndex = 0;
+                const bgColors = ['rgba(255, 255, 255, 0.0)', 'rgba(255, 255, 255, 0.03)'];
+
+                for (let i = 1; i < labels.length; i++) {
+                    const day = labels[i].substring(0, 5);
+                    if (day !== currentDay) {
+                        const endX = x.getPixelForValue(i);
+                        ctx.fillStyle = bgColors[colorIndex % 2];
+                        ctx.fillRect(startX, chartArea.top, endX - startX, chartArea.bottom - chartArea.top);
+                        ctx.beginPath();
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([5, 5]);
+                        ctx.moveTo(endX, chartArea.top);
+                        ctx.lineTo(endX, chartArea.bottom);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        startX = endX;
+                        currentDay = day;
+                        colorIndex++;
+                    }
+                }
+                ctx.fillStyle = bgColors[colorIndex % 2];
+                ctx.fillRect(startX, chartArea.top, chartArea.right - startX, chartArea.bottom - chartArea.top);
+                ctx.restore();
+            }
+        };
+
+        // Linia wskazująca aktualnie dotknięty punkt wykresu.
+        const touchCrosshairPlugin = {
+            id: 'touchCrosshair',
+            afterDraw(chart) {
+                const active = chart.getActiveElements();
+                if (!active || active.length === 0 || !chart.chartArea) return;
+                const x = active[0].element.x;
+                const { top, bottom } = chart.chartArea;
+                const { ctx } = chart;
+                ctx.save();
+                ctx.beginPath();
+                ctx.setLineDash([3, 4]);
+                ctx.strokeStyle = 'rgba(218, 230, 255, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.moveTo(x, top);
+                ctx.lineTo(x, bottom);
+                ctx.stroke();
+                ctx.restore();
+            }
+        };
+
+        // --- TWORZENIE / AKTUALIZACJA WYKRESU ---
+        function createOrUpdateChart(ctxId, scrollId, containerId, chartInst, label, data, color, unit) {
+            const ctx = document.getElementById(ctxId).getContext('2d');
+            const labels = data.map(r => formatTimestamp(r.timestamp));
+            const values = data.map(r => r.value);
+
+            // Ustaw szerokość canvasu
+            setChartWidth(containerId, data.length);
+
+            if (chartInst) {
+                chartInst.data.labels = labels;
+                chartInst.data.datasets[0].data = values;
+                chartInst.update('none');
+                return chartInst;
+            }
+
+            const newChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        borderColor: color,
+                        backgroundColor: color + '22',
+                        fill: true,
+                        tension: 0.24,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointHitRadius: 18,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#eaf0fb',
+                        pointBorderWidth: 2,
+                        borderCapStyle: 'round',
+                        borderJoinStyle: 'round',
+                        borderWidth: 2.2
+                    }]
+                },
+                plugins: [daySeparatorPlugin, touchCrosshairPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: Math.min(20, Math.max(6, Math.floor(data.length / 10))),
+                                color: '#93a3bb',
+                                maxRotation: 0,
+                                minRotation: 0,
+                                autoSkip: true,
+                                padding: 8
+                            },
+                            grid: { color: '#333' }
+                        },
+                        y: {
+                            ticks: { color: '#999' },
+                            grid: { color: '#333' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(8, 14, 25, 0.96)',
+                            titleColor: '#b8c9e4',
+                            bodyColor: '#f4f7ff',
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 14, weight: 'bold' },
+                            padding: 12,
+                            displayColors: false,
+                            caretPadding: 8,
+                            borderColor: color,
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.parsed.y;
+                                    val = (unit === '°C') ? val.toFixed(1) : val.toFixed(0);
+                                    return ` ${context.dataset.label}: ${val} ${unit}`;
+                                },
+                                title: function(context) {
+                                    return `Czas: ${context[0].label}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            return newChart;
+        }
+
+        function updateMetricStats(prefix, rows, key, digits, unit) {
+            const values = rows
+                .map(row => row[key])
+                .filter(value => typeof value === 'number' && Number.isFinite(value));
+            const minEl = document.getElementById(prefix + '-min');
+            const avgEl = document.getElementById(prefix + '-avg');
+            const maxEl = document.getElementById(prefix + '-max');
+            if (!values.length) {
+                minEl.textContent = avgEl.textContent = maxEl.textContent = '--';
+                return;
+            }
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+            const format = value => value.toLocaleString('pl-PL', {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            }) + ' ' + unit;
+            minEl.textContent = format(min);
+            avgEl.textContent = format(avg);
+            maxEl.textContent = format(max);
+        }
+
+        // Ręczny podgląd ekranu dziennego. Wyłączenie przywraca cykl zegara.
+        (() => {
+            const select = document.getElementById('display-test-mode');
+            const button = document.getElementById('display-test-toggle');
+            const status = document.getElementById('display-test-status');
+            let active = false;
+            let busy = false;
+            const names = { temp: 'dzienny — temperatura', hum: 'dzienny — wilgotność', press: 'dzienny — ciśnienie', weather: 'dzienny — pogoda', night: 'nocny — tylko godzina' };
+
+            async function setTestMode(mode) {
+                if (busy) return;
+                busy = true;
+                button.disabled = true;
+                status.textContent = mode === 'off' ? 'Przywracam automatyczny cykl…' : 'Wysyłam polecenie do zegara…';
+                try {
+                    const response = await fetch('http://' + window.location.hostname + ':8088/display-test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                        body: mode
+                    });
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    active = mode !== 'off';
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-pressed', String(active));
+                    button.textContent = active ? 'Wyłącz test' : 'Włącz test';
+                    status.classList.toggle('active', active);
+                    status.textContent = active
+                        ? 'Test aktywny: ' + names[mode] + '. Widok jest wymuszony niezależnie od godziny.'
+                        : 'Automatyczny cykl dzień/noc działa normalnie.';
+                } catch (error) {
+                    status.textContent = 'Nie udało się połączyć z zegarem. Spróbuj ponownie.';
+                } finally {
+                    busy = false;
+                    button.disabled = false;
+                }
+            }
+
+            button.addEventListener('click', () => {
+                if (active) setTestMode('off');
+                else setTestMode(select.value);
+            });
+            select.addEventListener('change', () => {
+                if (active) setTestMode(select.value);
+            });
+        })();
+
+        // Lampka jest niezależnym, domyślnie wyłączonym trybem matrycy.
+        (() => {
+            const button = document.getElementById('lamp-toggle');
+            const brightness = document.getElementById('lamp-brightness');
+            const density = document.getElementById('lamp-density');
+            const brightnessValue = document.getElementById('lamp-brightness-value');
+            const densityValue = document.getElementById('lamp-density-value');
+            const status = document.getElementById('lamp-status');
+            const endpoint = 'http://' + window.location.hostname + ':8088/lamp';
+            let enabled = false;
+            let busy = false;
+            let saveTimer = null;
+
+            function renderState(state) {
+                enabled = Boolean(state.enabled);
+                brightness.value = String(state.brightness);
+                density.value = String(state.density);
+                brightnessValue.textContent = state.brightness + '%';
+                densityValue.textContent = state.density + '%';
+                button.classList.toggle('active', enabled);
+                button.setAttribute('aria-pressed', String(enabled));
+                button.textContent = enabled ? 'Wyłącz lampkę' : 'Włącz lampkę';
+                status.classList.toggle('active', enabled);
+                status.textContent = enabled
+                    ? 'Lampka jest włączona. Zegar i pozostałe ekrany są tymczasowo wstrzymane.'
+                    : 'Lampka wyłączona. Zegar działa normalnie.';
+            }
+
+            async function sendState(nextEnabled = enabled) {
+                if (busy) return;
+                busy = true;
+                button.disabled = true;
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: nextEnabled,
+                            brightness: Number(brightness.value), density: Number(density.value) })
+                    });
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    renderState(await response.json());
+                } catch (error) {
+                    status.textContent = 'Nie udało się zmienić trybu lampki. Sprawdź połączenie z zegarem.';
+                } finally {
+                    busy = false;
+                    button.disabled = false;
+                }
+            }
+
+            async function loadState() {
+                try {
+                    const response = await fetch(endpoint, { cache: 'no-store' });
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    renderState(await response.json());
+                } catch (error) {
+                    status.textContent = 'Nie udało się odczytać stanu lampki z zegara.';
+                }
+            }
+
+            function updateLabels() {
+                brightnessValue.textContent = brightness.value + '%';
+                densityValue.textContent = density.value + '%';
+            }
+
+            function scheduleSettingsSave() {
+                updateLabels();
+                if (!enabled) return; // Ustawienia można przygotować przed włączeniem.
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(() => sendState(true), 90);
+            }
+
+            button.addEventListener('click', () => sendState(!enabled));
+            brightness.addEventListener('input', scheduleSettingsSave);
+            density.addEventListener('input', scheduleSettingsSave);
+            loadState();
+        })();
+
+        // Zmień wygląd planszy pogody: trzy litery albo ikona 8x8.
+        (() => {
+            const select = document.getElementById('weather-display-style');
+            const status = document.getElementById('weather-style-status');
+            async function setWeatherStyle(style, initial = false) {
+                status.textContent = initial ? 'Odczytuję ustawienie…' : 'Zmieniam wygląd planszy…';
+                try {
+                    const response = await fetch('http://' + window.location.hostname + ':8088/weather-style', initial ? { method: 'GET' } : {
+                        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: style
+                    });
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const current = (await response.text()).trim();
+                    select.value = current;
+                    status.classList.add('active');
+                    status.textContent = current === 'icon' ? 'Wyświetlana jest ikona pogody 8×8.' : 'Wyświetlany jest skrót tekstowy (3 litery).';
+                } catch (error) {
+                    status.classList.remove('active');
+                    status.textContent = 'Nie udało się zmienić ustawienia. Sprawdź połączenie z zegarem.';
+                }
+            }
+            select.addEventListener('change', () => setWeatherStyle(select.value));
+            setWeatherStyle('letters', true);
+        })();
+
+        // --- WCZYTANIE I RENDER ---
+        function loadData() {
+            fetch('/data.json')
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) return;
+                    allData = data;
+
+                    const filtered = applyRangeFilter(data);
+                    if (filtered.length === 0) return;
+
+                    const latest = filtered[filtered.length - 1];
+
+                    document.getElementById('curr-temp').innerText = latest.temperature.toFixed(1) + ' °C';
+                    document.getElementById('curr-hum').innerText = latest.humidity.toFixed(0) + ' %';
+                    document.getElementById('curr-press').innerText = latest.pressure.toFixed(0) + ' hPa';
+
+                    // Statystyki wyliczane z rzeczywistych pomiarów wybranego okresu.
+                    updateMetricStats('temp', filtered, 'temperature', 1, '°C');
+                    updateMetricStats('hum', filtered, 'humidity', 0, '%');
+                    updateMetricStats('press', filtered, 'pressure', 0, 'hPa');
+
+                    const temps = filtered.map(r => ({timestamp: r.timestamp, value: r.temperature}));
+                    const hums  = filtered.map(r => ({timestamp: r.timestamp, value: r.humidity}));
+                    const press = filtered.map(r => ({timestamp: r.timestamp, value: r.pressure}));
+
+                    tempChartInst  = createOrUpdateChart('tempChart',  'scroll-temp',  'container-temp',  tempChartInst,  'Temperatura', temps,  '#e74c3c', '°C');
+                    humChartInst   = createOrUpdateChart('humChart',   'scroll-hum',   'container-hum',   humChartInst,   'Wilgotność',  hums,   '#3498db', '%');
+                    pressChartInst = createOrUpdateChart('pressChart', 'scroll-press', 'container-press', pressChartInst, 'Ciśnienie',   press,  '#2ecc71', 'hPa');
+
+                    // Auto-przewiń na koniec tylko jeśli użytkownik nie przegląda ręcznie historii
+                    if (!userScrolledAway) {
+                        requestAnimationFrame(() => {
+                            ['scroll-temp', 'scroll-hum', 'scroll-press'].forEach(id => {
+                                const el = document.getElementById(id);
+                                if (el) {
+                                    el.scrollLeft = el.scrollWidth;
+                                    updateScrollFade(el);
+                                }
+                            });
+                        });
+                    }
+                })
+                .catch(err => console.error("Błąd pobierania danych z czujnika:", err));
+        }
+
+        // --- INICJALIZACJA ---
+        function init() {
+            // Selektor zakresu
+            const rangeButtons = document.querySelectorAll('.range-btn');
+            rangeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    rangeButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentRange = btn.dataset.range;
+                    userScrolledAway = false; // reset - nowy zakres = pokaż najnowsze
+                    // Zresetuj instancje wykresów, aby wymusić rekreację z nową szerokością
+                    if (tempChartInst) { tempChartInst.destroy(); tempChartInst = null; }
+                    if (humChartInst)  { humChartInst.destroy();  humChartInst = null; }
+                    if (pressChartInst){ pressChartInst.destroy(); pressChartInst = null; }
+                    loadData();
+                });
+            });
+
+            // Synchronizacja scrolla między wykresami
+            setupScrollSync();
+
+            // Panel wysyłania tekstu na wyświetlacz
+            const msgToggle = document.getElementById('msg-toggle');
+            const msgPanel = document.getElementById('msg-panel');
+            const msgInput = document.getElementById('msg-input');
+            const msgSend = document.getElementById('msg-send');
+            const msgStatus = document.getElementById('msg-status');
+
+            const toggleMessagePanel = () => {
+                const open = msgPanel.classList.toggle('visible');
+                msgToggle.classList.toggle('open', open);
+                msgToggle.setAttribute('aria-expanded', String(open));
+            };
+            msgToggle.setAttribute('role', 'button');
+            msgToggle.setAttribute('tabindex', '0');
+            msgToggle.setAttribute('aria-expanded', 'false');
+            msgToggle.addEventListener('click', toggleMessagePanel);
+            msgToggle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleMessagePanel();
+                }
+            });
+
+            // Wyślij po Enter
+            msgInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') msgSend.click();
+            });
+
+            msgSend.addEventListener('click', () => {
+                const text = msgInput.value.trim();
+                if (!text) return;
+
+                msgSend.disabled = true;
+                msgStatus.textContent = 'Wysyłanie...';
+                msgStatus.className = 'msg-status';
+
+                fetch('http://' + window.location.hostname + ':8088/send', {
+                    method: 'POST',
+                    body: text,
+                })
+                .then(res => {
+                    if (res.ok) {
+                        msgStatus.textContent = '✓ Wysłano!';
+                        msgStatus.className = 'msg-status ok';
+                        msgInput.value = '';
+                    } else {
+                        throw new Error('HTTP ' + res.status);
+                    }
+                })
+                .catch(err => {
+                    msgStatus.textContent = '✗ Błąd: ' + err.message;
+                    msgStatus.className = 'msg-status err';
+                })
+                .finally(() => {
+                    msgSend.disabled = false;
+                    setTimeout(() => {
+                        if (msgStatus.textContent.startsWith('✓')) {
+                            msgStatus.textContent = '';
+                        }
+                    }, 3000);
+                });
+            });
+        }
+
+        async function refreshAudioStatus() {
+            const status = document.getElementById('audio-status');
+            try {
+                const response = await fetch('http://' + window.location.hostname + ':8088/audio', { cache: 'no-store' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const state = await response.json();
+                status.classList.toggle('active', !!state.playing);
+                status.textContent = state.playing ? '♪ Muzyka odbierana — equalizer działa na matrycy.' : (state.connected ? 'Telefon połączony. Czekam na muzykę…' : 'Malina gotowa do parowania. Wybierz ją w ustawieniach Bluetooth telefonu.');
+            } catch (error) { status.textContent = 'Nie można odczytać stanu Bluetooth.'; }
+        }
+        refreshAudioStatus();
+        setInterval(refreshAudioStatus, 2500);
+        init();
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
+</body>
+</html>
+
+[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]

@@ -1,0 +1,28 @@
+# Local configuration and private deployment settings
+zegar.conf
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime data
+data/
+web/data.json
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Editor / OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
