@@ -11,7 +11,7 @@ The project is designed for Raspberry Pi Zero-class hardware. Slow sensor reads,
 
 ## Table of contents
 
-- [Start here — choose a guide](#start-here--choose-a-guide)
+- [Start here — choose a guide](#start-here)
 - [Features](#features)
 - [Hardware used in the reference build](#hardware-used-in-the-reference-build)
   - [Other software-supported hardware](#other-software-supported-hardware)
@@ -42,9 +42,9 @@ The project is designed for Raspberry Pi Zero-class hardware. Slow sensor reads,
 - [Data, privacy, and licensing](#data-privacy-and-licensing)
 - [Build and wiring guide](#build-and-wiring-guide)
 - [Detailed documentation](#detailed-documentation)
-- [Contributing](#contributing)
+- [Contributing guide](CONTRIBUTING.md)
 
-## Start here — choose a guide
+## Start here
 
 | What you want to do | Recommended documentation |
 |---|---|
@@ -55,8 +55,6 @@ The project is designed for Raspberry Pi Zero-class hardware. Slow sensor reads,
 | Learn how the application is structured and how it runs | [Architecture overview](docs/ARCHITECTURE.md) |
 | Add a sensor, custom screen or background module | [Extensions guide](docs/EXTENSIONS.md) |
 | Set up a development environment and contribute changes | [Contributing guide](CONTRIBUTING.md) |
-
-
 
 > The default configuration is conservative: the Bluetooth audio visualizer is disabled, animations are off, and the daytime clock uses the bundled MatrixChunky8X font.
 
