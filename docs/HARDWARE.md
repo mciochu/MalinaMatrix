@@ -13,6 +13,16 @@ This page separates the known reference build from generic connection guidance. 
 | Sensor bus | I²C bus 1 | Used by BME280. |
 | Power supply | 5 V supply suitable for Raspberry Pi and display | Exact make, model and current rating are not recorded. Choose a supply based on the modules you actually use. |
 
+## What the hardware looks like
+
+The photos below show **representative examples** of these component types. They are included to help identify the general shape of each part; they do **not** confirm the manufacturer, PCB revision or exact breakout used in the reference build.
+
+| Component | Example photo | Identification |
+|---|---|---|
+| Raspberry Pi Zero W | <a href="https://www.pbtech.com/au/product/SEVRBP0412/Raspberry-Pi-Zero-W-1GHz-BCM2835-Single-Core-CPU-5"><img src="https://www.pbtech.com/au/imgprod/S/E/SEVRBP0412__2.jpg" width="180" alt="Raspberry Pi Zero W board"></a> | Small green single-board computer with GPIO pads along one edge. [Photo source](https://www.pbtech.com/au/product/SEVRBP0412/Raspberry-Pi-Zero-W-1GHz-BCM2835-Single-Core-CPU-5). |
+| MAX7219 8×8 LED matrix | <a href="https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2516"><img src="https://www.sgbotic.com/images/detailed/13/02516-02.jpg" width="180" alt="MAX7219 LED matrix modules"></a> | Small square LED panels; several modules connect in a chain to form the 64×8 display. [Photo source](https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2516). |
+| BME280 breakout | <a href="https://shop.pimoroni.com/en-eu/products/bme280-breakout"><img src="https://cdn11.bigcommerce.com/s-am5zt8xfow/images/stencil/1280x1280/products/2870/8590/bme280-breakout-1_1500x1500__33941.1648135111.jpg?c=2" width="180" alt="Pimoroni BME280 breakout board"></a> | Small sensor board with connection pads for power, SDA and SCL. The pictured Pimoroni board is an example, not a confirmed match. [Photo source](https://shop.pimoroni.com/en-eu/products/bme280-breakout). |
+
 ## Typical Raspberry Pi Zero W connections
 
 The following are the standard GPIO mappings for a Raspberry Pi Zero W with its 40-pin header. They describe the normal SPI0 and I²C1 wiring; confirm the physical connector orientation and your module labels before connecting anything.
