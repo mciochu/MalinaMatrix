@@ -2,11 +2,61 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-C51A4A?logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)\n[![CI](https://github.com/mciochu/MalinaMatrix/actions/workflows/ci.yml/badge.svg)](https://github.com/mciochu/MalinaMatrix/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/mciochu/MalinaMatrix/actions/workflows/ci.yml/badge.svg)](https://github.com/mciochu/MalinaMatrix/actions/workflows/ci.yml)
 
 **Malina Matrix** is a modular Raspberry Pi clock and sensor dashboard for chained MAX7219 LED matrices. It combines a readable LED clock with optional environmental readings, a compact history graph, weather information, a browser dashboard, and extension points for custom sensors, screens, and background modules.
 
 The project is designed for Raspberry Pi Zero-class hardware. Slow sensor reads, network requests, history exports, and custom screen rendering are kept away from the main display loop. Optional features are controlled from one configuration file.
+
+## Table of contents
+
+- [Start here — choose a guide](#start-here--choose-a-guide)
+- [Features](#features)
+- [Hardware used in the reference build](#hardware-used-in-the-reference-build)
+  - [Other software-supported hardware](#other-software-supported-hardware)
+- [Hardware overview](#hardware)
+- [Repository layout](#repository-layout)
+- [Quick start](#quick-start)
+  - [Prepare the Raspberry Pi](#1-prepare-the-raspberry-pi)
+  - [Clone the project](#2-clone-the-project)
+  - [Configure the hardware](#3-configure-the-hardware)
+  - [Install and start the service](#4-install-and-start-the-service)
+  - [Run manually](#5-run-manually-optional)
+- [Browser dashboard](#browser-dashboard)
+  - [Nginx setup](#nginx-example)
+- [Configuration](#configuration)
+  - [Live reload and restart boundaries](#live-reload-and-restart-boundaries)
+- [Adding extensions](#adding-extensions)
+  - [Add a sensor backend](#add-a-sensor-backend)
+  - [Add a custom screen](#add-a-custom-screen)
+  - [Add an optional background module](#add-an-optional-background-module)
+- [Fonts and bitmap images](#fonts-and-bitmap-images)
+  - [Fonts](#fonts)
+  - [Monochrome images](#monochrome-images)
+- [Optional features](#optional-features)
+  - [Bluetooth audio visualizer](#bluetooth-audio-visualizer)
+  - [Animations](#animations)
+- [Development and checks](#development-and-checks)
+- [Troubleshooting](#troubleshooting)
+- [Data, privacy, and licensing](#data-privacy-and-licensing)
+- [Build and wiring guide](#build-and-wiring-guide)
+- [Detailed documentation](#detailed-documentation)
+- [Contributing](#contributing)
+
+## Start here — choose a guide
+
+| What you want to do | Recommended documentation |
+|---|---|
+| Identify the parts and assemble the clock | [Build guide](docs/BUILD_GUIDE.md) |
+| Check GPIO pins, SPI, I²C and sensor wiring | [Hardware reference](docs/HARDWARE.md) |
+| Install the application and run it as a system service | [Installation guide](docs/INSTALLATION.md) |
+| Understand every configuration section and setting | [Configuration reference](docs/CONFIGURATION.md) |
+| Learn how the application is structured and how it runs | [Architecture overview](docs/ARCHITECTURE.md) |
+| Add a sensor, custom screen or background module | [Extensions guide](docs/EXTENSIONS.md) |
+| Set up a development environment and contribute changes | [Contributing guide](CONTRIBUTING.md) |
+
+
 
 > The default configuration is conservative: the Bluetooth audio visualizer is disabled, animations are off, and the daytime clock uses the bundled MatrixChunky8X font.
 
@@ -433,4 +483,12 @@ Before testing the display manually, stop the systemd service to avoid two proce
 
 New to the project? Start with **[Build guide: parts, wiring and first boot](docs/BUILD_GUIDE.md)**. It explains the reference hardware, the SPI and I²C connections, setup checks and first launch in a short, practical sequence.
 
-## Detailed documentation\n\n- [Architecture and runtime lifecycle](docs/ARCHITECTURE.md)\n- [Hardware and wiring overview](docs/HARDWARE.md)\n- [Installation and service deployment](docs/INSTALLATION.md)\n- [Configuration reference](docs/CONFIGURATION.md)\n- [Writing sensor, screen and module extensions](docs/EXTENSIONS.md)\n\nContributions and new hardware backends are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+## Detailed documentation
+
+- [Architecture and runtime lifecycle](docs/ARCHITECTURE.md)
+- [Hardware and wiring overview](docs/HARDWARE.md)
+- [Installation and service deployment](docs/INSTALLATION.md)
+- [Configuration reference](docs/CONFIGURATION.md)
+- [Writing sensor, screen and module extensions](docs/EXTENSIONS.md)
+
+Contributions and new hardware backends are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
