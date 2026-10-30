@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-C51A4A?logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)\n[![CI](https://github.com/mciochu/MalinaMatrix/actions/workflows/ci.yml/badge.svg)](https://github.com/mciochu/MalinaMatrix/actions/workflows/ci.yml)
 
 **Malina Matrix** is a modular Raspberry Pi clock and sensor dashboard for chained MAX7219 LED matrices. It combines a readable LED clock with optional environmental readings, a compact history graph, weather information, a browser dashboard, and extension points for custom sensors, screens, and background modules.
 
@@ -32,7 +32,7 @@ The default setup targets:
 - SPI enabled for the MAX7219 chain.
 - I²C enabled when a sensor is used.
 
-Other MAX7219 chain sizes can be configured, but the built-in screen layout and sample custom-screen contract are designed for an 8-pixel-high display.
+Other MAX7219 chain sizes can be configured, but the built-in screen layout and sample custom-screen contract are designed for an 8-pixel-high display. The MAX7219 display path and BME280 readings have been verified on the maintainer's Raspberry Pi. DS18B20, SHT31 and DHT22 adapters are included, but require the matching hardware, wiring and optional libraries; validate each adapter on your own setup.
 
 ## Repository layout
 
@@ -63,7 +63,7 @@ MalinaMatrix/
 │   │   └── bitmap_assets.py         # JSON / PBM monochrome image loader
 │   ├── extensions/
 │   │   ├── sensors/                 # BME280, DS18B20, SHT31, DHT22, template
-│   │   ├── screens/                 # Example custom screen and template
+│   │   ├── screens/                 # Example custom screen
 │   │   └── modules/                 # Optional background-module template
 │   └── assets/
 │       ├── fonts/                   # Bundled 6-series and 8-series BDF fonts
@@ -406,4 +406,4 @@ Before testing the display manually, stop the systemd service to avoid two proce
 - No cloud account or API key is required for the default clock, sensor, or weather features.
 - The main project is distributed under the MIT License. Bundled fonts and weather icons retain their third-party MIT notices in the asset directories.
 
-Contributions and new hardware backends are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+## Detailed documentation\n\n- [Architecture and runtime lifecycle](docs/ARCHITECTURE.md)\n- [Hardware and wiring overview](docs/HARDWARE.md)\n- [Installation and service deployment](docs/INSTALLATION.md)\n- [Configuration reference](docs/CONFIGURATION.md)\n- [Writing sensor, screen and module extensions](docs/EXTENSIONS.md)\n\nContributions and new hardware backends are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)**.

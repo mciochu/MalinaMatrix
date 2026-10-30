@@ -91,5 +91,3 @@ class ModuleManager:
         for thread in self._extension_threads:
             if thread.is_alive():
                 thread.join(timeout=0.15)
-
-[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]

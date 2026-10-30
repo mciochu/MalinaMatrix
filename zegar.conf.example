@@ -1,13 +1,16 @@
 # ==============================================================
-# MALINA MATRIX — PORTABLE EXAMPLE CONFIGURATION
-# Copy this file to zegar.conf and edit it for your hardware.
+# MALINA MATRIX — PORTABLE CONFIGURATION
+# Edit this file and save it. Safe display settings reload automatically.
+# Hardware, module, sensor-driver, web-port and extension-list changes
+# require a service restart: sudo systemctl restart malina-matrix.service
+#
 # Boolean values: true / false.
 # Relative paths are resolved from the project directory.
-# Invalid values fall back to safe built-in defaults.
+# Invalid values are replaced with safe defaults and logged once.
 # ==============================================================
 
 [modules]
-# Core features
+# Core runtime services
 sensors = true
 history = true
 graph = true
@@ -17,13 +20,12 @@ web_control = true
 messages = true
 lamp = true
 
-# Optional features (disabled by default)
+# Optional modules. Audio remains disabled by default.
 audio_visualizer = false
 flip_clock = false
 info_transitions = false
 
 [hardware]
-# Number of chained MAX7219 8x8 modules.
 panel_count = 8
 block_orientation = -90
 rotation = 0
@@ -36,17 +38,19 @@ format_24h = true
 show_seconds = false
 
 [fonts]
-# BDF fonts are bundled with the application.
+# Use a .bdf file path or BUILTIN:LCD_FONT / BUILTIN:TINY_FONT.
+# Bundled Matrix fonts are stored inside zegar_app/assets/fonts/.
 day = zegar_app/assets/fonts/8-series/MatrixChunky8X.bdf
 sensor = zegar_app/assets/fonts/6-series/MatrixChunky6.bdf
 night = BUILTIN:TINY_FONT
 message = BUILTIN:LCD_FONT
 fallback = BUILTIN:LCD_FONT
 sensor_fallback = BUILTIN:TINY_FONT
-# Put custom BDF fonts in zegar_app/assets/fonts/custom/.
+# Place additional BDF files in zegar_app/assets/fonts/custom/.
 
 [display]
 # Built-in screens: temperature, humidity, pressure, weather.
+# Custom screens are added to this list after their plugin is enabled below.
 screen_order = temperature, humidity, pressure, weather
 screen_dwell_seconds = 5.0
 normal_refresh_seconds = 1.0
@@ -57,17 +61,18 @@ night_start_hour = 23
 night_end_hour = 6
 
 [brightness]
+# Preserve the existing display intensity.
 day_contrast = 1
 night_contrast = 0
 lamp_default_brightness = 100
 lamp_default_density = 100
 
 [sensor]
-# Polling runs in the background, not in the display loop.
+# Sensor polling happens on a dedicated worker, never on the display loop.
 refresh_seconds = 1.0
 
 [sensors]
-# Only listed sensor backends are imported.
+# Add backend names here; only listed backends are imported.
 # Available built-ins: bme280, ds18b20, sht31, dht22.
 enabled = bme280
 
@@ -76,6 +81,7 @@ address = 0x76
 port = 1
 
 [sensors.ds18b20]
+# Use "auto" to select the first detected 1-Wire device.
 device_id = auto
 
 [sensors.sht31]
@@ -83,6 +89,7 @@ address = 0x44
 port = 1
 
 [sensors.dht22]
+# CircuitPython board pin name, e.g. D4.
 pin = D4
 
 [history]
@@ -93,9 +100,7 @@ graph_hours = 6
 export_on_start = true
 
 [weather]
-# Set these coordinates to your location.
-# 0.0 / 0.0 are neutral examples, not a useful local forecast.
-latitude = 0.0
+latitude = 0.0  # Replace with your location before using the weather screen.
 longitude = 0.0
 cache_seconds = 1800
 retry_seconds = 300
@@ -114,13 +119,15 @@ port = 8088
 message_duration_seconds = 10
 
 [screens]
-# Add Python filenames (without .py) from zegar_app/extensions/screens/.
+# Add plugin filenames (without .py), separated by commas.
+# Example: plugins = example_status
 plugins =
 plugin_refresh_seconds = 2.0
 plugin_stale_seconds = 15.0
 
 [extensions]
-# Explicitly enabled modules in zegar_app/extensions/modules/.
+# Optional background extensions in zegar_app/extensions/modules/.
+# Keep empty unless you explicitly install and trust an extension.
 modules =
 
 [effects]
@@ -131,4 +138,5 @@ info_blank_seconds = 0.045
 info_frame_seconds = 0.025
 
 [assets]
+# Add 1-bit JSON bitmap images to this directory.
 images_dir = zegar_app/assets/images

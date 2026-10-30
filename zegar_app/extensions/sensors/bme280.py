@@ -13,5 +13,3 @@ def create(settings):
     if driver.backend is None:
         raise RuntimeError("no supported BME280 driver or I2C sensor was found")
     return driver
-
-[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]

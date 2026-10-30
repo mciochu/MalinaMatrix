@@ -20,5 +20,3 @@ def create(settings):
         raise ValueError("This board backend currently supports the default CircuitPython I2C bus only")
     i2c = busio.I2C(board.SCL, board.SDA)
     return SHT31(adafruit_sht31d.SHT31D(i2c, address=address))
-
-[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]

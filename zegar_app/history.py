@@ -65,8 +65,16 @@ def export_json_for_web():
 
         # Upewnij się, że katalog istnieje i zapisz plik JSON.
         os.makedirs(WEB_DIR, exist_ok=True)
-        with open(os.path.join(WEB_DIR, "data.json"), "w", encoding="utf-8") as f:
+        output_path = os.path.join(WEB_DIR, "data.json")
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        # The static web server runs under a separate account (for example www-data).
+        # Keep the generated public dashboard export readable while the SQLite DB
+        # remains protected by the service umask.
+        try:
+            os.chmod(output_path, 0o644)
+        except OSError:
+            pass
     except Exception as e:
         print(f"Failed to export JSON to {WEB_DIR}: {e}", file=sys.stderr)
 

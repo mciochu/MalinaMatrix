@@ -1,6 +1,8 @@
-# Install only the optional hardware or feature dependencies you use.
+# Optional sensor backends. Install only the packages for the hardware you use.
 
-# Alternative CircuitPython sensor backends (SHT31 / DHT22)
+# CircuitPython BME280 / SHT31 / DHT22 backends
+adafruit-blinka>=8.0
+adafruit-circuitpython-bme280>=2.0
 adafruit-circuitpython-sht31d>=2.0
 adafruit-circuitpython-dht>=4.0
 
