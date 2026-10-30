@@ -4,6 +4,7 @@ import sys
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from .config import get_settings
+from .message_effects import default_message_options, message_options_payload, normalize_message_payload
 
 _settings = get_settings()
 _LAMP_MODULE_ENABLED = _settings.boolean("modules", "lamp", True)
@@ -11,6 +12,7 @@ _MESSAGES_MODULE_ENABLED = _settings.boolean("modules", "messages", True)
 
 # --- SERWER HTTP DO ODBIERANIA WIADOMOŚCI Z PRZEGLĄDARKI ---
 _pending_message = None
+_pending_message_options = default_message_options(_settings.integer("web", "message_duration_seconds", 10, 1, 600))
 _message_received_time = 0
 _display_test_mode = None  # None = cykl automatyczny; temp/hum/press/weather/night = wymuszony test
 _weather_display_style = _settings.get("weather", "display_style", "icon").lower()
@@ -43,6 +45,28 @@ class MessageHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif self.path == '/message-options':
+            body = json.dumps(message_options_payload(), ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif self.path == '/message':
+            body = json.dumps({
+                'text': _pending_message or '',
+                'options': _pending_message_options,
+                'active': bool(_pending_message and time.time() - _message_received_time < _pending_message_options.get('duration', MESSAGE_DISPLAY_SECONDS))
+            }, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         elif self.path == '/audio':
             body = json.dumps(_audio_status).encode('utf-8')
             self.send_response(200)
@@ -57,7 +81,7 @@ class MessageHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
-        global _pending_message, _message_received_time, _display_test_mode, _weather_display_style
+        global _pending_message, _pending_message_options, _message_received_time, _display_test_mode, _weather_display_style
         global _lamp_enabled, _lamp_brightness, _lamp_density
         if self.path == '/lamp':
             if not _LAMP_MODULE_ENABLED:
@@ -113,16 +137,65 @@ class MessageHandler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(_weather_display_style.encode('ascii'))
+        elif self.path == '/message':
+            if not _MESSAGES_MODULE_ENABLED:
+                self.send_response(404)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                return
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                if content_length < 1 or content_length > 8192:
+                    raise ValueError('Nieprawidłowy rozmiar żądania')
+                payload = json.loads(self.rfile.read(content_length).decode('utf-8'))
+                if not isinstance(payload, dict):
+                    raise ValueError('Oczekiwano obiektu JSON')
+                if payload.get('stop') is True:
+                    _pending_message = None
+                    _message_received_time = 0
+                    result = {'active': False, 'stopped': True}
+                else:
+                    normalized = normalize_message_payload(payload, MESSAGE_DISPLAY_SECONDS)
+                    _pending_message = normalized.pop('text')
+                    _pending_message_options = normalized
+                    _message_received_time = time.time()
+                    result = {'active': True, 'text': _pending_message, 'options': _pending_message_options}
+            except (ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                self.send_response(400)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': str(exc)}, ensure_ascii=False).encode('utf-8'))
+                return
+            body = json.dumps(result, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         elif self.path == '/send':
             if not _MESSAGES_MODULE_ENABLED:
                 self.send_response(404)
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 return
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode('utf-8')
-            _pending_message = body.strip()
-            _message_received_time = time.time()
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                if content_length < 1 or content_length > 8192:
+                    raise ValueError('Invalid request size')
+                body = self.rfile.read(content_length).decode('utf-8')
+                normalized = normalize_message_payload({'text': body}, MESSAGE_DISPLAY_SECONDS)
+                _pending_message = normalized.pop('text')
+                _pending_message_options = normalized
+                _message_received_time = time.time()
+            except (ValueError, TypeError, UnicodeDecodeError) as exc:
+                self.send_response(400)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(str(exc).encode('utf-8'))
+                return
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')

@@ -18,6 +18,7 @@ from .network import check_internet
 from .system_utils import is_time_synced
 from .weather import weather_label, get_weather_nonblocking
 from . import web_control
+from .message_effects import draw_message_frame
 from .flip_clock import FlipClockAnimator, FLIP_CLOCK_ENABLED, FRAME_INTERVAL
 from .info_transition import InfoTransition, INFO_TRANSITIONS_ENABLED, FRAME_INTERVAL as INFO_FRAME_INTERVAL
 from .assets.icons.weather_icons import LED8x8ICONS as _WEATHER_ICONS
@@ -231,6 +232,7 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
     flip_clock = FlipClockAnimator(initial_clock_display)
     info_transition = InfoTransition()
     previous_info_mode = None
+    message_font_cache = {}
 
     def runtime_log(message):
         print(f"[EXTENSION] {message}", file=sys.stderr)
@@ -368,7 +370,9 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                         web_control._weather_display_style = weather_style
             # Check whether a message is currently active.
             msg_elapsed = time.time() - web_control._message_received_time
-            is_showing_message = bool(modules["messages"] and modules["web_control"] and web_control._pending_message and msg_elapsed < web_control.MESSAGE_DISPLAY_SECONDS)
+            message_options = web_control._pending_message_options
+            message_duration = message_options.get("duration", web_control.MESSAGE_DISPLAY_SECONDS)
+            is_showing_message = bool(modules["messages"] and modules["web_control"] and web_control._pending_message and msg_elapsed < message_duration)
 
             lamp_active = bool(modules["lamp"] and modules["web_control"] and web_control._lamp_enabled)
             if audio_visualizer is not None:
@@ -493,12 +497,20 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                     # Lampka ma pierwszeństwo przed zegarem, planszami i wiadomościami.
                     draw_lamp_pattern(draw, device.width, device.height, web_control._lamp_density)
                 elif is_showing_message:
-                    # Przewijanie tekstu fontem LCD, płynna animacja
-                    msg_width = textsize(web_control._pending_message, font=clock_font)[0]
-                    total_scroll = msg_width + device.width
-                    progress = msg_elapsed / web_control.MESSAGE_DISPLAY_SECONDS
-                    x_offset = int(device.width - progress * total_scroll)
-                    text(draw, (x_offset, 0), web_control._pending_message, font=clock_font, fill="white")
+                    # Renderowanie efektu tekstowego bez blokowania zegara ani czujników.
+                    font_spec = message_options.get("font", "CONFIGURED")
+                    if font_spec == "CONFIGURED":
+                        active_message_font = clock_font
+                    else:
+                        active_message_font = message_font_cache.get(font_spec)
+                        if active_message_font is None:
+                            active_message_font = _load_configured_font(
+                                font_spec, fallback_font, "message studio", verbose)
+                            message_font_cache[font_spec] = active_message_font
+                    draw_message_frame(
+                        draw, web_control._pending_message, active_message_font,
+                        device.width, device.height, msg_elapsed, message_options, text, textsize
+                    )
                 elif audio_active:
                     # 32 pasma na 64 piksele: wąskie, dwupikselowe słupki
                     # pokazują więcej szczegółów rytmu i barwy dźwięku.
