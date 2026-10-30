@@ -10,6 +10,29 @@ The project is designed for Raspberry Pi Zero-class hardware. Slow sensor reads,
 
 > The default configuration is conservative: the Bluetooth audio visualizer is disabled, animations are off, and the daytime clock uses the bundled MatrixChunky8X font.
 
+## Hardware used in the reference build
+
+This is the hardware that the maintainer's working clock is based on. Where an exact board or manufacturer part number was not recorded, the entry is deliberately described by its confirmed type rather than an invented model.
+
+| Part | Model / specification | Role and status |
+|---|---|---|
+| Single-board computer | **Raspberry Pi Zero W** | Main computer running Raspberry Pi OS / Debian and the Python application. |
+| LED display | **8 × MAX7219 8×8 LED matrix modules**, chained together | Main clock display; 64×8 pixels in the reference layout. The exact module brand/PCB revision is not specified. |
+| Environmental sensor | **BME280** I²C sensor | Measures temperature, relative humidity and pressure. The exact breakout-board manufacturer/model is not recorded. |
+| Display interface | SPI0 | Sends image data from the Raspberry Pi to the MAX7219 chain. |
+| Sensor interface | I²C bus 1 | Reads the BME280. |
+| Power | 5 V supply suitable for the Pi and LED chain | Exact power-supply model and current rating used in the reference build are not documented; size it for your own hardware. |
+
+### Other software-supported hardware
+
+These are supported by optional drivers, but are **not part of the confirmed reference build**:
+
+- DS18B20 — 1-Wire temperature sensor.
+- SHT31 — I²C temperature and humidity sensor.
+- DHT22 — GPIO temperature and humidity sensor.
+
+The lamp feature is a software mode that uses the existing MAX7219 matrix as a light surface; it does not imply a separate physical lamp module. Bluetooth audio visualizer code is present but disabled by default.
+
 ## Features
 
 - **MAX7219 clock:** configurable panel chain, orientation, rotation, day/night layout, 12/24-hour format, and brightness.
@@ -405,5 +428,9 @@ Before testing the display manually, stop the systemd service to avoid two proce
 - Weather coordinates are configurable and should be reviewed before publishing a personal configuration.
 - No cloud account or API key is required for the default clock, sensor, or weather features.
 - The main project is distributed under the MIT License. Bundled fonts and weather icons retain their third-party MIT notices in the asset directories.
+
+## Build and wiring guide
+
+New to the project? Start with **[Build guide: parts, wiring and first boot](docs/BUILD_GUIDE.md)**. It explains the reference hardware, the SPI and I²C connections, setup checks and first launch in a short, practical sequence.
 
 ## Detailed documentation\n\n- [Architecture and runtime lifecycle](docs/ARCHITECTURE.md)\n- [Hardware and wiring overview](docs/HARDWARE.md)\n- [Installation and service deployment](docs/INSTALLATION.md)\n- [Configuration reference](docs/CONFIGURATION.md)\n- [Writing sensor, screen and module extensions](docs/EXTENSIONS.md)\n\nContributions and new hardware backends are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
