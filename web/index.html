@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#080e19">
     <meta name="description" content="Domowa stacja pomiarowa BME280 — aktualne odczyty i historia temperatury, wilgotności oraz ciśnienia.">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="message-studio.css">
+    <script src="message-studio.js" defer></script>
     <style>
         :root {
             color-scheme: dark;
@@ -350,6 +352,23 @@
             <div class="lamp-status" id="audio-status" role="status" aria-live="polite">Uruchamiam odbiornik Bluetooth…</div>
         </section>
 
+        <section class="message-studio" id="message-studio" aria-label="Studio komunikatów LED">
+            <div class="message-studio-head"><div><div class="message-studio-kicker">MAX7219 · EDYTOR KOMUNIKATÓW</div><h2 class="message-studio-title">Studio napisów LED</h2><p class="message-studio-copy">Zaprojektuj animację, zobacz ją na podglądzie matrycy i wyślij bezpośrednio na Raspberry Pi.</p></div><span class="message-studio-chip">64 × 8 PX</span></div>
+            <div class="message-studio-grid">
+                <div class="message-editor">
+                    <div class="message-field"><div class="message-label-row"><label for="ms-text">Treść komunikatu</label><output class="message-value" id="ms-count">0 / 280</output></div><textarea class="message-textarea" id="ms-text" maxlength="280" placeholder="Wpisz tekst...">Witaj w domu!</textarea><div class="message-presets"><button class="message-preset" type="button" data-text="Witaj w domu!">Witaj</button><button class="message-preset" type="button" data-text="Malina Matrix">Malina Matrix</button><button class="message-preset" type="button" data-text="Miłego dnia :)">Miłego dnia</button><button class="message-preset" type="button" data-text="Temperatura i wilgotność">Długi tekst</button></div></div>
+                    <div class="message-field"><div class="message-label-row"><label for="ms-effect">Efekt animacji</label><span class="message-value" id="ms-effect-tag">Przewijanie w lewo</span></div><select class="message-select" id="ms-effect"><option value="scroll_left">Przewijanie w lewo</option><option value="scroll_right">Przewijanie w prawo</option><option value="bounce">Odbijanie od krawędzi</option><option value="static">Tekst statyczny</option><option value="blink">Miganie</option><option value="typewriter">Litera po literze</option><option value="wave">Fala</option><option value="drop">Wjazd z góry</option></select><p class="message-help" id="ms-effect-help">Tekst przesuwa się po matrycy i powtarza do końca czasu ekspozycji.</p></div>
+                    <div class="message-field"><div class="message-label-row"><label for="ms-speed">Tempo animacji</label><output class="message-value" id="ms-speed-value">35 / 100</output></div><input class="message-range" id="ms-speed" type="range" min="1" max="100" value="35"><p class="message-help">Tempo ruchu, pisania liter, fali lub migania — zależnie od wybranego efektu.</p></div>
+                    <div class="message-two-cols"><div class="message-field"><div class="message-label-row"><label for="ms-duration">Czas ekspozycji</label><output class="message-value" id="ms-duration-value">10 s</output></div><input class="message-range" id="ms-duration" type="range" min="1" max="180" value="10"></div><div class="message-field"><div class="message-label-row"><label for="ms-font">Krój pisma</label></div><select class="message-select" id="ms-font"><option value="CONFIGURED">Font z konfiguracji</option></select></div></div>
+                    <div class="message-two-cols"><div class="message-field"><div class="message-label-row"><label for="ms-align">Wyrównanie poziome</label></div><select class="message-select" id="ms-align"><option value="left">Do lewej</option><option value="center" selected>Wyśrodkowane</option><option value="right">Do prawej</option></select></div><div class="message-field"><div class="message-label-row"><label for="ms-vertical">Pozycja pionowa</label></div><select class="message-select" id="ms-vertical"><option value="top">Góra</option><option value="center" selected>Środek</option><option value="bottom">Dół</option></select></div></div>
+                    <div class="message-actions"><button class="message-action primary" id="ms-send" type="button">Wyślij na matrycę</button><button class="message-action secondary" id="ms-stop" type="button">STOP · wróć do zegara</button></div>
+                    <div class="message-status" id="ms-status" role="status" aria-live="polite">Gotowy do wysłania komunikatu.</div>
+                    <div class="message-saved-row"><select class="message-select" id="ms-saved" aria-label="Zapisane presety"><option value="">Zapisane presety…</option></select><button class="message-mini-btn" id="ms-save" type="button">Zapisz preset</button><button class="message-mini-btn" id="ms-load" type="button" disabled>Wczytaj</button><button class="message-mini-btn" id="ms-delete" type="button" disabled>Usuń</button></div>
+                </div>
+                <div class="message-preview-panel"><div class="message-preview-top"><span class="message-preview-title">Podgląd matrycy</span><span class="message-preview-state" id="ms-preview-state">ANIMACJA NA ŻYWO</span></div><div class="message-matrix-wrap"><canvas id="message-preview" width="640" height="80" aria-label="Podgląd matrycy 64 na 8 pikseli"></canvas></div><p class="message-preview-note">Podgląd odwzorowuje format 64×8 i ruch efektu. Dokładny kształt liter zależy od fontu BDF oraz modułu MAX7219.</p><p class="message-preview-note">Długie hasła najlepiej wyglądają w ruchu, krótkie — statycznie, falą albo efektem pisania.</p></div>
+            </div>
+        </section>
+
         <section class="msg-card" aria-label="Wiadomość na zegar">
             <div class="msg-panel-toggle" id="msg-toggle">
                 <span class="msg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m7 10 3 2 3-2M7 14h10"/></svg></span>
@@ -367,7 +386,7 @@
     <script>
         // ==========================================
         // KONFIGURACJA
-        const WERSJA_STRONY = "v1.4.0";
+        const WERSJA_STRONY = "v1.5.0";
         const PX_PER_POINT = 7;        // szerokość w px na 1 punkt danych
         const MIN_CHART_WIDTH = 300;   // minimalna szerokość canvasu
         document.getElementById('app-footer').innerText = `Panel BME280 | Wersja: ${WERSJA_STRONY}`;
