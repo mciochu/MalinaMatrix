@@ -101,5 +101,6 @@
   "chart.label.temperature": "Temperature",
   "chart.label.humidity": "Humidity",
   "chart.label.pressure": "Pressure",
-  "footer": "BME280 dashboard | Version: {version}"
+  "footer": "BME280 dashboard | Version: {version}",
+  "message.sample": "Welcome home!"
 }
