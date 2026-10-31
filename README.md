@@ -88,7 +88,7 @@ The lamp feature is a software mode that uses the existing MAX7219 matrix as a l
 - **Environmental readings:** BME280 temperature, humidity, and pressure, polled by a background sensor worker.
 - **On-matrix graph:** compact history graph with a dedicated humidity bar-chart mode.
 - **Weather:** daily forecast from [Open-Meteo](https://open-meteo.com/) using configurable coordinates; no API key is required.
-- **Browser dashboard:** current readings, historical charts, display tests, lamp controls, and an advanced LED text studio with eight effects, speed, duration, BDF fonts, alignment, live preview and saved presets.
+- **Browser dashboard:** current readings, historical charts, display tests, lamp controls, and a compact LED message panel with three display modes (scroll left, scroll right and static text) and a selectable display duration.
 - **LED lamp mode:** turns the matrix into a pixel light using the MAX7219 hardware intensity setting; no per-pixel PWM is used.
 - **Live configuration reload:** selected settings such as fonts, screen order, brightness, clock format, and screen timing apply without restarting the service.
 - **Extension system:** add sensor backends, custom screens, and optional background modules as separate Python files.
