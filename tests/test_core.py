@@ -152,6 +152,25 @@ class MessageStudioTests(unittest.TestCase):
                                    options, fake_draw, fake_size)
                 self.assertTrue(calls, f"{effect} should draw at least one glyph")
 
+    def test_drop_effect_enters_from_above_then_holds_position(self):
+        positions = []
+        def fake_draw(draw, position, value, **kwargs):
+            positions.append(position)
+        def fake_size(value, font=None):
+            return (len(value) * 5, 7)
+
+        options = normalize_message_payload({"text": "HELLO", "effect": "drop", "speed": 50})
+        draw_message_frame(object(), "HELLO", object(), 64, 8, 0.0, options, fake_draw, fake_size)
+        start_y = positions[-1][1]
+        draw_message_frame(object(), "HELLO", object(), 64, 8, 10.0, options, fake_draw, fake_size)
+        settled_y = positions[-1][1]
+        draw_message_frame(object(), "HELLO", object(), 64, 8, 20.0, options, fake_draw, fake_size)
+        held_y = positions[-1][1]
+
+        self.assertLess(start_y, 0)
+        self.assertEqual(settled_y, 0)
+        self.assertEqual(held_y, settled_y)
+
     def test_scroll_speed_changes_message_position(self):
         calls = []
         def fake_draw(draw, position, value, **kwargs):

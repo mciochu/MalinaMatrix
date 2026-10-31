@@ -166,7 +166,8 @@ def draw_message_frame(draw, message, font, width, height, elapsed, options, dra
         return
     if effect == "drop":
         x = _aligned_x(width, text_width, horizontal)
-        y = max(-text_height, int(base_y - seconds * (2.0 + speed * 0.55)))
+        fall_speed = 2.0 + speed * 0.55
+        y = min(base_y, int(-text_height + seconds * fall_speed))
         draw_text(draw, (x, y), message, font=font, fill="white")
         return
     x = _aligned_x(width, text_width, horizontal)
