@@ -430,6 +430,11 @@ It requires a working Bluetooth A2DP source profile, PipeWire/WirePlumber routin
 
 Flip-clock and information transitions are optional and disabled by default. Enable them with **flip_clock** and **info_transitions** in **[modules]**. Keep them disabled on constrained hardware if you prefer the lowest overhead.
 
+
+## Dashboard languages
+
+The web dashboard supports Polish and English, with a language selector in the header. The selected language is remembered in the browser; a fresh browser profile uses Polish by default. Translation dictionaries and supported languages are maintained separately in `web/locales/` and `web/config/languages.json`, so more languages can be added without rewriting the dashboard. See **[Dashboard localization](docs/LOCALIZATION.md)** for the structure and contribution steps.
+
 ## Development and checks
 
 Run the hardware-independent test suite:
