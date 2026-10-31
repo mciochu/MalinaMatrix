@@ -8,12 +8,13 @@
 .ms-field{min-width:0;margin:0}
 .ms-label{display:block;margin:0 0 6px;color:#c5d2e6;font-size:.76rem;font-weight:750}
 .ms-textarea{display:block;width:100%;min-height:68px;max-height:120px;padding:10px 12px;resize:vertical;border:1px solid #34445f;border-radius:11px;outline:none;background:#091322;color:#f2f5ff;font:500 .93rem/1.4 system-ui,sans-serif}
-.ms-textarea:focus,.ms-duration:focus{border-color:#9ab1ff;box-shadow:0 0 0 3px rgba(139,168,255,.12)}
+.ms-textarea:focus,.ms-duration:focus,.ms-font:focus{border-color:#9ab1ff;box-shadow:0 0 0 3px rgba(139,168,255,.12)}
 .ms-count{display:block;margin-top:4px;color:#7587a3;text-align:right;font-size:.66rem}
 .ms-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
 .ms-mode{min-height:42px;padding:8px 7px;border:1px solid rgba(166,190,224,.17);border-radius:10px;background:rgba(255,255,255,.035);color:#b9c7dd;font-size:.75rem;font-weight:750;line-height:1.2;cursor:pointer}
 .ms-mode[aria-pressed="true"]{border-color:#91aaff;background:rgba(139,168,255,.16);color:#eef3ff;box-shadow:inset 0 0 0 1px rgba(139,168,255,.14)}
 .ms-duration{width:100%;min-height:42px;padding:8px 10px;border:1px solid #34445f;border-radius:10px;outline:none;background:#0b1728;color:#eef3ff;font:inherit;font-size:.82rem}
+.ms-font{width:100%;min-height:42px;padding:8px 10px;border:1px solid #34445f;border-radius:10px;outline:none;background:#0b1728;color:#eef3ff;font:inherit;font-size:.82rem}
 .ms-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .ms-action{min-height:43px;padding:10px 12px;border:1px solid transparent;border-radius:10px;font-size:.8rem;font-weight:850;cursor:pointer}
 .ms-action:disabled{opacity:.55;cursor:wait}
@@ -30,7 +31,7 @@
  .ms-textarea{min-height:58px;max-height:92px;padding:9px 10px;font-size:.9rem}
  .ms-options{gap:5px;margin:10px 0}
  .ms-mode{min-height:40px;padding:7px 4px;font-size:.69rem}
- .ms-duration{min-height:40px}
+ .ms-duration,.ms-font{min-height:40px}
  .ms-actions{gap:7px;margin-top:10px}
  .ms-action{min-height:42px;padding:9px 7px;font-size:.75rem}
 }
