@@ -101,5 +101,6 @@
   "chart.label.temperature": "Temperatura",
   "chart.label.humidity": "Wilgotność",
   "chart.label.pressure": "Ciśnienie",
-  "footer": "Panel BME280 | Wersja: {version}"
+  "footer": "Panel BME280 | Wersja: {version}",
+  "message.sample": "Witaj w domu!"
 }
