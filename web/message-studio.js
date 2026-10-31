@@ -1,35 +1,68 @@
 (() => {
 'use strict';
-const labels={scroll_left:'Przewijanie w lewo',scroll_right:'Przewijanie w prawo',bounce:'Odbijanie od krawędzi',static:'Tekst statyczny',blink:'Miganie',typewriter:'Litera po literze',wave:'Fala',drop:'Wjazd z góry'};
-const apiRoot=()=>'http://'+location.hostname+':8088',storageKey='malinaMatrix.messageStudio.presets.v1';
-const defaults={effect:'scroll_left',speed:35,duration:10,font:'CONFIGURED',align:'center',vertical:'center'};
+const apiRoot=()=>'http://'+location.hostname+':8088';
 document.addEventListener('DOMContentLoaded',()=>{
- const studio=document.getElementById('message-studio');if(!studio)return;
- const el=id=>document.getElementById(id),txt=el('ms-text'),effect=el('ms-effect'),speed=el('ms-speed'),duration=el('ms-duration'),font=el('ms-font'),align=el('ms-align'),vertical=el('ms-vertical'),canvas=el('message-preview'),ctx=canvas.getContext('2d');
- let presets=[],busy=false,previewStart=performance.now(),frame=0;
- function value(){return{text:txt.value,effect:effect.value,speed:Number(speed.value),duration:Number(duration.value),font:font.value,align:align.value,vertical:vertical.value};}
- function status(message,type){el('ms-status').textContent=message;el('ms-status').className='message-status'+(type?' '+type:'');}
- function xAlign(w,tw,a){return a==='left'?0:a==='right'?w-tw:(w-tw)/2;}
- function yAlign(h,th,a){return a==='top'?0:a==='bottom'?h-th:(h-th)/2;}
- function update(reset){const v=value();el('ms-count').textContent=v.text.length+' / 280';el('ms-speed-value').textContent=v.speed+' / 100';el('ms-duration-value').textContent=v.duration+' s';el('ms-effect-tag').textContent=labels[v.effect]||v.effect;
- const help={scroll_left:'Tekst przejeżdża przez całą matrycę i powtarza się do końca czasu ekspozycji.',scroll_right:'Tekst wjeżdża z lewej i przesuwa się w prawo.',bounce:'Napis odbija się pomiędzy krawędziami matrycy.',static:'Tekst pozostaje nieruchomy w wybranym miejscu.',blink:'Tekst pojawia się i znika; tempo reguluje częstotliwość migania.',typewriter:'Kolejne znaki są odsłaniane jeden po drugim.',wave:'Każda litera porusza się niezależnie po fali.',drop:'Komunikat opada z góry i zatrzymuje się na ekranie.'};
- el('ms-effect-help').textContent=help[v.effect]||'';speed.disabled=v.effect==='static';if(reset)previewStart=performance.now();}
- function preview(now){const v=value(),t=Math.max(0,(now-previewStart)/1000),w=64,h=8,s=v.text||' ';ctx.setTransform(10,0,0,10,0,0);ctx.imageSmoothingEnabled=false;ctx.fillStyle='#02060b';ctx.fillRect(0,0,w,h);ctx.font='7px monospace';ctx.textBaseline='top';ctx.fillStyle='#e7efff';const tw=ctx.measureText(s).width,th=7,by=Math.max(0,Math.min(h-th,yAlign(h,th,v.vertical))),px=4+v.speed*.8;let x=xAlign(w,tw,v.align),y=by,visible=s;
- if(v.effect==='scroll_left')x=w-((t*px)%(w+tw+8));else if(v.effect==='scroll_right')x=-tw+((t*px)%(w+tw+8));else if(v.effect==='bounce'){const d=Math.abs(w-tw),p=(t*px)%Math.max(1,d*2),o=p<=d?p:2*d-p;x=tw<=w?o:-o;}else if(v.effect==='blink'){if(Math.floor(t*(.5+v.speed/30)*2)%2)visible='';}else if(v.effect==='typewriter'){visible=s.slice(0,Math.min(s.length,Math.floor(t*(.5+v.speed*.2))));x=xAlign(w,ctx.measureText(visible).width,v.align);}else if(v.effect==='drop')y=Math.min(by,-th+t*(2+v.speed*.55));else if(v.effect==='wave'){x=xAlign(w,tw,v.align);const p=t*(.8+v.speed/18);for(let i=0;i<visible.length;i++){const ch=visible[i],cw=ctx.measureText(ch).width,wy=Math.max(0,Math.min(h-th,by+Math.round(Math.sin(p+i*.9)*2)));ctx.fillText(ch,x,wy);x+=cw;}frame=requestAnimationFrame(preview);return;}
- if(visible)ctx.fillText(visible,x,y);frame=requestAnimationFrame(preview);}
- async function call(path,opts){const r=await fetch(apiRoot()+path,Object.assign({cache:'no-store'},opts||{}));if(!r.ok){let m='HTTP '+r.status;try{m=(await r.json()).error||m;}catch(_){}throw Error(m);}const type=r.headers.get('content-type')||'';return type.includes('application/json')?r.json():r.text();}
- async function catalog(){try{const c=await call('/message-options');if(Array.isArray(c.effects)){effect.innerHTML='';c.effects.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.label;effect.appendChild(o);});}if(Array.isArray(c.fonts)){font.innerHTML='';c.fonts.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.label;font.appendChild(o);});}effect.value=defaults.effect;font.value=defaults.font;update(true);status('Połączono z Maliną. Edytor jest gotowy.','ok');}catch(e){status('Brak połączenia z Raspberry Pi: '+e.message,'err');}}
- function readPresets(){try{const v=localStorage.getItem(storageKey);presets=v?JSON.parse(v):[];if(!Array.isArray(presets))presets=[];}catch(_){presets=[];}const s=el('ms-saved');s.innerHTML='<option value="">Zapisane presety…</option>';presets.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.name||('Preset '+(i+1));s.appendChild(o);});el('ms-load').disabled=el('ms-delete').disabled=s.value==='';}
- function savePresets(){try{localStorage.setItem(storageKey,JSON.stringify(presets));return true;}catch(_){status('Przeglądarka nie pozwoliła zapisać presetu.','err');return false;}}
- async function send(){if(busy)return;const v=value();if(!v.text.trim()){status('Najpierw wpisz treść komunikatu.','err');txt.focus();return;}busy=true;el('ms-send').disabled=el('ms-stop').disabled=true;status('Wysyłam tekst i ustawienia…');try{await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)});status('Komunikat działa. Zegar wróci automatycznie po '+v.duration+' s.','ok');el('ms-preview-state').textContent='WYSŁANO NA RASPBERRY PI';}catch(e){status('Nie udało się wysłać: '+e.message,'err');}finally{busy=false;el('ms-send').disabled=el('ms-stop').disabled=false;}}
- async function stop(){if(busy)return;busy=true;el('ms-send').disabled=el('ms-stop').disabled=true;try{await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stop:true})});status('Komunikat zatrzymany. Zegar wrócił do pracy.','ok');el('ms-preview-state').textContent='PODGLĄD';}catch(e){status('Nie udało się zatrzymać: '+e.message,'err');}finally{busy=false;el('ms-send').disabled=el('ms-stop').disabled=false;}}
- txt.addEventListener('input',()=>update(false));[effect,speed,duration,font,align,vertical].forEach(c=>{c.addEventListener('input',()=>update(true));c.addEventListener('change',()=>update(true));});
- studio.querySelectorAll('[data-text]').forEach(b=>b.addEventListener('click',()=>{txt.value=b.dataset.text;update(true);}));
- el('ms-send').addEventListener('click',send);el('ms-stop').addEventListener('click',stop);
- el('ms-save').addEventListener('click',()=>{const n=prompt('Nazwa presetu:');if(!n||!n.trim())return;if(presets.length>=30){status('Limit 30 presetów. Usuń nieużywane.','err');return;}presets.push({name:n.trim().slice(0,40),settings:value()});if(savePresets()){readPresets();status('Preset zapisany w tej przeglądarce.','ok');}});
- el('ms-saved').addEventListener('change',()=>{const ok=el('ms-saved').value!=='';el('ms-load').disabled=el('ms-delete').disabled=!ok;});
- el('ms-load').addEventListener('click',()=>{const p=presets[Number(el('ms-saved').value)];if(!p||!p.settings)return;const v=p.settings;txt.value=v.text||'';effect.value=v.effect||defaults.effect;speed.value=String(v.speed||defaults.speed);duration.value=String(v.duration||defaults.duration);font.value=v.font||defaults.font;align.value=v.align||defaults.align;vertical.value=v.vertical||defaults.vertical;update(true);status('Wczytano preset: '+p.name,'ok');});
- el('ms-delete').addEventListener('click',()=>{const i=Number(el('ms-saved').value);if(!Number.isInteger(i)||i<0||i>=presets.length)return;presets.splice(i,1);if(savePresets()){readPresets();status('Preset usunięty.','ok');}});
- readPresets();update(true);catalog();frame=requestAnimationFrame(preview);window.addEventListener('pagehide',()=>cancelAnimationFrame(frame),{once:true});
+ const el=id=>document.getElementById(id);
+ const studio=el('message-studio');
+ if(!studio)return;
+ const txt=el('ms-text'),duration=el('ms-duration'),sendButton=el('ms-send'),stopButton=el('ms-stop');
+ let selectedEffect='scroll_left',busy=false;
+ function status(message,type){
+   const node=el('ms-status');
+   node.textContent=message;
+   node.className='ms-status'+(type?' '+type:'');
+ }
+ function updateCount(){el('ms-count').textContent=txt.value.length+' / 280';}
+ async function call(path,options){
+   const response=await fetch(apiRoot()+path,Object.assign({cache:'no-store'},options||{}));
+   if(!response.ok){
+     let message='Błąd połączenia: HTTP '+response.status;
+     try{message=(await response.json()).error||message;}catch(_){}
+     throw new Error(message);
+   }
+   return response.json();
+ }
+ function setBusy(value){
+   busy=value;
+   sendButton.disabled=value;
+   stopButton.disabled=value;
+ }
+ studio.querySelectorAll('[data-effect]').forEach(button=>{
+   button.addEventListener('click',()=>{
+     selectedEffect=button.dataset.effect;
+     studio.querySelectorAll('[data-effect]').forEach(item=>{
+       item.setAttribute('aria-pressed',String(item===button));
+     });
+   });
+ });
+ txt.addEventListener('input',updateCount);
+ sendButton.addEventListener('click',async()=>{
+   if(busy)return;
+   const text=txt.value.trim();
+   if(!text){status('Wpisz najpierw wiadomość.','err');txt.focus();return;}
+   setBusy(true);
+   status('Wysyłam wiadomość…');
+   try{
+     const seconds=Number(duration.value);
+     await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({text,effect:selectedEffect,speed:35,duration:seconds})});
+     status('Gotowe. Napis wyświetla się na matrycy.','ok');
+   }catch(error){status('Nie udało się wysłać: '+error.message,'err');}
+   finally{setBusy(false);}
+ });
+ stopButton.addEventListener('click',async()=>{
+   if(busy)return;
+   setBusy(true);
+   status('Zatrzymuję napis…');
+   try{
+     await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({stop:true})});
+     status('Napis zatrzymany. Wrócił zegar.','ok');
+   }catch(error){status('Nie udało się zatrzymać: '+error.message,'err');}
+   finally{setBusy(false);}
+ });
+ updateCount();
+ call('/message-options').then(()=>status('Połączono z Maliną.','ok'))
+   .catch(error=>status('Brak połączenia z Raspberry Pi: '+error.message,'err'));
 });
 })();
