@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded',()=>{
  const el=id=>document.getElementById(id);
  const studio=el('message-studio');
  if(!studio)return;
- const txt=el('ms-text'),duration=el('ms-duration'),sendButton=el('ms-send'),stopButton=el('ms-stop');
- let selectedEffect='scroll_left',busy=false;
+ const txt=el('ms-text'),duration=el('ms-duration'),font=el('ms-font'),sendButton=el('ms-send'),stopButton=el('ms-stop');
+ let selectedEffect='scroll_left',selectedFont='zegar_app/assets/fonts/8-series/MatrixChunky8X.bdf',busy=false;
  function status(message,type){
    const node=el('ms-status');
    node.textContent=message;
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    try{
      const seconds=Number(duration.value);
      await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({text,effect:selectedEffect,speed:35,duration:seconds})});
+       body:JSON.stringify({text,effect:selectedEffect,speed:35,duration:seconds,font:font.value})});
      status('Gotowe. Napis wyświetla się na matrycy.','ok');
    }catch(error){status('Nie udało się wysłać: '+error.message,'err');}
    finally{setBusy(false);}
@@ -62,7 +62,20 @@ document.addEventListener('DOMContentLoaded',()=>{
    finally{setBusy(false);}
  });
  updateCount();
- call('/message-options').then(()=>status('Połączono z Maliną.','ok'))
-   .catch(error=>status('Brak połączenia z Raspberry Pi: '+error.message,'err'));
+ call('/message-options').then(options=>{
+   const fonts=Array.isArray(options.fonts)?options.fonts:[];
+   font.replaceChildren();
+   fonts.forEach(item=>{
+     const option=document.createElement('option');
+     option.value=item.id;
+     option.textContent=item.label.replace(/\\.bdf$/i,'');
+     font.appendChild(option);
+   });
+   const preferred=fonts.find(item=>item.id.endsWith('/MatrixChunky8X.bdf'));
+   selectedFont=preferred?preferred.id:(fonts[0]?fonts[0].id:'CONFIGURED');
+   font.value=selectedFont;
+   font.addEventListener('change',()=>{selectedFont=font.value;});
+   status('Połączono z Maliną.','ok');
+ }).catch(error=>status('Brak połączenia z Raspberry Pi: '+error.message,'err'));
 });
 })();
