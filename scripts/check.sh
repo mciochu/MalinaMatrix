@@ -7,6 +7,9 @@ cd "$ROOT_DIR"
 echo "[check] Compiling Python sources..."
 python3 -m compileall -q zegar.py zegar_app tests
 
+echo "[check] Validating dashboard translations..."
+python3 scripts/validate-locales.py
+
 echo "[check] Running hardware-independent tests..."
 python3 -m unittest discover -s tests -v
 
