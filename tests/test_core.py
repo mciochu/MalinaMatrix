@@ -148,7 +148,7 @@ class MessageStudioTests(unittest.TestCase):
                     "text": "MALINA", "effect": effect, "speed": 50,
                     "duration": 10, "font": "CONFIGURED",
                 })
-                draw_message_frame(object(), options["text"], object(), 64, 8, 0.8,
+                draw_message_frame(object(), options["text"], object(), 64, 8, 0.1,
                                    options, fake_draw, fake_size)
                 self.assertTrue(calls, f"{effect} should draw at least one glyph")
 
