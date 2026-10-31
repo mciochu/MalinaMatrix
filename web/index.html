@@ -30,8 +30,8 @@
         }
         button,input { font: inherit; }
         button { -webkit-tap-highlight-color: transparent; }
-        .container { width: min(100%,1060px); margin: 0 auto; }
-        .page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:4px 2px 24px; }
+        .container { width: min(100%,1280px); margin: 0 auto; }
+        .page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:4px 2px 26px; padding:4px 4px 21px; border-bottom:1px solid var(--border); }
         .brand { display:flex; gap:13px; align-items:center; min-width:0; }
         .brand-mark {
             width:48px; height:48px; flex:0 0 48px; display:grid; place-items:center;
@@ -52,7 +52,7 @@
         .section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:0 2px 13px; }
         .section-heading h2 { margin:0; font-size:1rem; letter-spacing:-.02em; }
         .section-heading p { margin:5px 0 0; color:var(--muted); font-size:.78rem; }
-        .stats-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:13px; margin-bottom:25px; }
+        .stats-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; margin-bottom:30px; }
         .stat-card {
             position:relative; min-width:0; overflow:hidden; padding:20px; border-radius:22px;
             border:1px solid var(--border); background:var(--surface);
@@ -85,14 +85,13 @@
         .chart-name { display:flex; align-items:center; gap:10px; font-size:.94rem; font-weight:740; letter-spacing:-.015em; }
         .chart-mark { width:9px; height:9px; border-radius:50%; background:var(--chart-tone); box-shadow:0 0 14px color-mix(in srgb,var(--chart-tone) 50%,transparent); }
         .chart-unit { color:#9eafc6; padding:5px 9px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.025); font-size:.76rem; font-weight:700; }
-        .chart-scroll { overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:#364860 transparent; position:relative; border-radius:10px; }
-        .chart-scroll::-webkit-scrollbar { height:4px; }
-        .chart-scroll::-webkit-scrollbar-thumb { background:#364860; border-radius:99px; }
-        .chart-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
+        .chart-scroll { width:100%; min-width:0; overflow:hidden; position:relative; border-radius:12px; }
+                .chart-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
         .chart-stat { min-width:0; padding:10px 12px; border:1px solid rgba(166,190,224,.085); border-radius:12px; background:rgba(7,14,25,.38); }
         .chart-stat-label { display:block; color:#8193ad; font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.085em; }
         .chart-stat-value { display:block; margin-top:5px; color:#eaf0fb; font-size:.92rem; font-weight:750; letter-spacing:-.025em; font-variant-numeric:tabular-nums; white-space:nowrap; }
-        .chart-container { position:relative; height:245px; width:100%; }
+        .chart-container { position:relative; height:clamp(230px,24vw,310px); width:100%; min-width:0; }
+        .chart-container canvas { display:block; }
         .display-test-card { margin-top:18px; padding:18px; border:1px solid var(--border); border-radius:20px; background:linear-gradient(145deg,rgba(22,34,54,.92),rgba(12,20,34,.96)); box-shadow:0 12px 30px rgba(0,0,0,.13); }
         .display-test-head { display:flex; align-items:center; gap:11px; margin-bottom:8px; }
         .display-test-icon { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; border-radius:13px; color:#a5baff; background:rgba(139,168,255,.12); }
@@ -144,10 +143,24 @@
         .msg-status.err { color:#ff9e91; }
         .footer { text-align:center; color:#667991; font-size:.76rem; margin-top:28px; padding:0 0 10px; letter-spacing:.025em; }
         button:focus-visible,.msg-panel-toggle:focus-visible { outline:2px solid #b8cbff; outline-offset:3px; }
-        @media (min-width:900px) { .card { padding:21px 23px 17px; } }
+        @media (min-width:900px) {
+            body { padding:34px 30px 54px; }
+            .container { width:min(100%,1320px); }
+            .page-header { margin-bottom:30px; }
+            .stats-grid { gap:17px; margin-bottom:36px; }
+            .stat-card { padding:25px 27px; border-radius:23px; }
+            .stat-val { margin-top:21px; }
+            .chart-section { margin-top:36px; }
+            .chart-section-heading h2 { font-size:1.24rem; }
+            .range-wrap { margin-bottom:18px; }
+            .card { padding:24px 27px 21px; margin-bottom:18px; border-radius:23px; }
+            .chart-container { height:300px; }
+            .display-test-card,.lamp-card { padding:23px 25px; }
+            .message-studio { margin-top:20px; }
+        }
         @media (max-width:650px) {
             body { padding:max(14px,env(safe-area-inset-top)) 13px max(22px,env(safe-area-inset-bottom)); }
-            .page-header { align-items:flex-start; margin:2px 2px 21px; gap:8px; }
+            .page-header { flex-wrap:wrap; align-items:flex-start; margin:2px 2px 21px; padding:0 0 15px; gap:8px; }
             .brand { gap:10px; }
             .brand-mark { width:42px; height:42px; flex-basis:42px; border-radius:14px; }
             .brand-mark svg { width:22px; height:22px; }
@@ -180,7 +193,7 @@
             .chart-stat-label { font-size:.61rem; letter-spacing:.055em; }
             .chart-stat-value { font-size:.78rem; margin-top:5px; }
             .chart-container { height:210px; }
-            .chart-scroll { overflow-x:hidden; }
+            .chart-scroll { width:100%; min-width:0; overflow:hidden; }
             #container-temp,#container-hum,#container-press { width:100% !important; min-width:100% !important; }
             .display-test-card { margin-top:14px; padding:14px 12px; border-radius:17px; }
             .lamp-card { margin-top:14px; padding:14px 12px; border-radius:17px; }
@@ -412,8 +425,6 @@
         // ==========================================
         // KONFIGURACJA
         const WERSJA_STRONY = "v1.5.0";
-        const PX_PER_POINT = 7;        // szerokość w px na 1 punkt danych
-        const MIN_CHART_WIDTH = 300;   // minimalna szerokość canvasu
         window.MALINA_VERSION = WERSJA_STRONY;
         document.getElementById('app-footer').innerText = window.MalinaI18n?.t('footer', {version: WERSJA_STRONY}) || `Panel BME280 | Wersja: ${WERSJA_STRONY}`;
         // ==========================================
@@ -421,6 +432,15 @@
         let tempChartInst = null;
         let humChartInst = null;
         let pressChartInst = null;
+        let chartResizeFrame = 0;
+        window.addEventListener('resize', () => {
+            if (chartResizeFrame) cancelAnimationFrame(chartResizeFrame);
+            chartResizeFrame = requestAnimationFrame(() => {
+                [tempChartInst, humChartInst, pressChartInst].forEach(chart => {
+                    if (chart) chart.resize();
+                });
+            });
+        }, { passive: true });
         let allData = [];              // pełne dane z data.json
         let currentRange = '30d';      // domyślnie ostatnie 30 dni
         let userScrolledAway = false;  // czy użytkownik ręcznie przewinął wykres
@@ -445,15 +465,6 @@
                 default:    return data; // pełny dostępny zakres
             }
             return data.filter(r => new Date(r.timestamp).getTime() >= cutoff);
-        }
-
-        // --- OBLICZANIE SZEROKOŚCI CANVASU ---
-        function setChartWidth(containerId, pointCount) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            const width = Math.max(MIN_CHART_WIDTH, pointCount * PX_PER_POINT);
-            container.style.minWidth = width + 'px';
-            container.style.width = width + 'px';
         }
 
         // --- ZARZĄDZANIE WSKAŹNIKIEM FADE ---
@@ -573,11 +584,12 @@
             const values = data.map(r => r.value);
 
             // Ustaw szerokość canvasu
-            setChartWidth(containerId, data.length);
 
             if (chartInst) {
                 chartInst.data.labels = labels;
+                chartInst.data.datasets[0].label = label;
                 chartInst.data.datasets[0].data = values;
+                chartInst.resize();
                 chartInst.update('none');
                 return chartInst;
             }
@@ -608,6 +620,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    resizeDelay: 100,
                     animation: { duration: 300 },
                     events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
                     interaction: {
