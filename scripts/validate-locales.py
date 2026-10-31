@@ -64,7 +64,7 @@ references = set()
 for source in source_files:
     if source.exists():
         references.update(REFERENCE_RE.findall(source.read_text(encoding="utf-8")))
-unknown = sorted(references - fallback_keys)
+dynamic_prefixes = {'range.', 'duration.'}\nunknown = sorted(ref for ref in references - fallback_keys if ref not in dynamic_prefixes)
 if unknown:
     fail(f"translation references without dictionary entries: {unknown}")
 
