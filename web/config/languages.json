@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "defaultLanguage": "pl",
+  "fallbackLanguage": "pl",
+  "storageKey": "malina-matrix-language",
+  "languages": [
+    {
+      "code": "pl",
+      "name": "Polski",
+      "nativeName": "Polski",
+      "file": "/i18n/locales/pl.json"
+    },
+    {
+      "code": "en",
+      "name": "English",
+      "nativeName": "English",
+      "file": "/i18n/locales/en.json"
+    }
+  ]
+}
