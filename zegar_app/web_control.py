@@ -2,6 +2,7 @@
 import json
 import sys
 import time
+from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from .config import get_settings
 from .message_effects import default_message_options, message_options_payload, normalize_message_payload
@@ -27,8 +28,35 @@ MESSAGE_DISPLAY_SECONDS = _settings.integer("web", "message_duration_seconds", 1
 WEB_HOST = _settings.get("web", "host", "0.0.0.0")
 WEB_PORT = _settings.integer("web", "port", 8088, 1, 65535)
 
+# Static localization resources are served through this existing API because
+# the dashboard directory on some installations is intentionally read-only.
+_WEB_ASSETS_DIR = Path(__file__).resolve().parent / "web"
+if not _WEB_ASSETS_DIR.is_dir():
+    _WEB_ASSETS_DIR = Path(__file__).resolve().parent.parent / "web"
+_I18N_FILES = {
+    "/i18n/config.json": _WEB_ASSETS_DIR / "config" / "languages.json",
+    "/i18n/locales/pl.json": _WEB_ASSETS_DIR / "locales" / "pl.json",
+    "/i18n/locales/en.json": _WEB_ASSETS_DIR / "locales" / "en.json",
+}
+
 class MessageHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path in _I18N_FILES:
+            try:
+                body = _I18N_FILES[self.path].read_bytes()
+            except OSError:
+                self.send_response(404)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path == '/weather-style':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain; charset=utf-8')
