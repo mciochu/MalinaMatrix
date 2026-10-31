@@ -7,12 +7,16 @@ document.addEventListener('DOMContentLoaded',()=>{
  if(!studio)return;
  const txt=el('ms-text'),duration=el('ms-duration'),font=el('ms-font'),sendButton=el('ms-send'),stopButton=el('ms-stop');
  let selectedEffect='scroll_left',selectedFont='zegar_app/assets/fonts/8-series/MatrixChunky8X.bdf',busy=false;
- function status(message,type){
+ const tr=(key,params)=>window.MalinaI18n?.t(key,params)||key;
+ let statusKey='message.connecting',statusParams={},statusType='';
+ function status(key,params={},type=''){
+   statusKey=key;statusParams=params&&typeof params==='object'?params:{};statusType=typeof params==='string'?params:type;
    const node=el('ms-status');
-   node.textContent=message;
-   node.className='ms-status'+(type?' '+type:'');
+   node.textContent=tr(key,statusParams);
+   node.className='ms-status'+(statusType?' '+statusType:'');
  }
- function updateCount(){el('ms-count').textContent=txt.value.length+' / 280';}
+ function updateCount(){el('ms-count').textContent=tr('message.count',{count:txt.value.length});}
+ window.addEventListener('malina:languagechange',()=>{updateCount();status(statusKey,statusParams,statusType);});
  async function call(path,options){
    const response=await fetch(apiRoot()+path,Object.assign({cache:'no-store'},options||{}));
    if(!response.ok){
@@ -39,26 +43,26 @@ document.addEventListener('DOMContentLoaded',()=>{
  sendButton.addEventListener('click',async()=>{
    if(busy)return;
    const text=txt.value.trim();
-   if(!text){status('Wpisz najpierw wiadomość.','err');txt.focus();return;}
+   if(!text){status('message.empty',{},'err');txt.focus();return;}
    setBusy(true);
-   status('Wysyłam wiadomość…');
+   status('message.sending');
    try{
      const seconds=Number(duration.value);
      await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
        body:JSON.stringify({text,effect:selectedEffect,speed:35,duration:seconds,font:font.value})});
-     status('Gotowe. Napis wyświetla się na matrycy.','ok');
-   }catch(error){status('Nie udało się wysłać: '+error.message,'err');}
+     status('message.sent',{},'ok');
+   }catch(error){status('message.sendError',{error:error.message},'err');}
    finally{setBusy(false);}
  });
  stopButton.addEventListener('click',async()=>{
    if(busy)return;
    setBusy(true);
-   status('Zatrzymuję napis…');
+   status('message.stopping');
    try{
      await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
        body:JSON.stringify({stop:true})});
-     status('Napis zatrzymany. Wrócił zegar.','ok');
-   }catch(error){status('Nie udało się zatrzymać: '+error.message,'err');}
+     status('message.stopped',{},'ok');
+   }catch(error){status('message.stopError',{error:error.message},'err');}
    finally{setBusy(false);}
  });
  updateCount();
@@ -75,7 +79,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    selectedFont=preferred?preferred.id:(fonts[0]?fonts[0].id:'CONFIGURED');
    font.value=selectedFont;
    font.addEventListener('change',()=>{selectedFont=font.value;});
-   status('Połączono z Maliną.','ok');
- }).catch(error=>status('Brak połączenia z Raspberry Pi: '+error.message,'err'));
+   status('message.connected',{},'ok');
+ }) .catch(error=>status('message.noConnection',{error:error.message},'err'));
 });
 })();
