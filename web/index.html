@@ -414,7 +414,8 @@
         const WERSJA_STRONY = "v1.5.0";
         const PX_PER_POINT = 7;        // szerokość w px na 1 punkt danych
         const MIN_CHART_WIDTH = 300;   // minimalna szerokość canvasu
-        document.getElementById('app-footer').innerText = `Panel BME280 | Wersja: ${WERSJA_STRONY}`;
+        window.MALINA_VERSION = WERSJA_STRONY;
+        document.getElementById('app-footer').innerText = window.MalinaI18n?.t('footer', {version: WERSJA_STRONY}) || `Panel BME280 | Wersja: ${WERSJA_STRONY}`;
         // ==========================================
 
         let tempChartInst = null;
@@ -427,11 +428,7 @@
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             if (isNaN(date)) return timestamp;
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${day}.${month} ${hours}:${minutes}`;
+            return date.toLocaleString(window.MalinaI18n?.getLocale() || 'pl-PL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' });
         }
 
         // --- FILTROWANIE ZAKRESU CZASU ---
@@ -654,7 +651,7 @@
                                     return ` ${context.dataset.label}: ${val} ${unit}`;
                                 },
                                 title: function(context) {
-                                    return `Czas: ${context[0].label}`;
+                                    return `${window.MalinaI18n?.t('chart.time') || 'Czas'}: ${context[0].label}`;
                                 }
                             }
                         }
@@ -679,7 +676,7 @@
             const min = Math.min(...values);
             const max = Math.max(...values);
             const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-            const format = value => value.toLocaleString('pl-PL', {
+            const format = value => value.toLocaleString(window.MalinaI18n?.getLocale() || 'pl-PL', {
                 minimumFractionDigits: digits,
                 maximumFractionDigits: digits
             }) + ' ' + unit;
@@ -695,13 +692,14 @@
             const status = document.getElementById('display-test-status');
             let active = false;
             let busy = false;
-            const names = { temp: 'dzienny — temperatura', hum: 'dzienny — wilgotność', press: 'dzienny — ciśnienie', weather: 'dzienny — pogoda', night: 'nocny — tylko godzina' };
+            const tr = (key, params) => window.MalinaI18n?.t(key, params) || key;
+            const names = { temp: tr('display.temp'), hum: tr('display.hum'), press: tr('display.press'), weather: tr('display.weather'), night: tr('display.night') };
 
             async function setTestMode(mode) {
                 if (busy) return;
                 busy = true;
                 button.disabled = true;
-                status.textContent = mode === 'off' ? 'Przywracam automatyczny cykl…' : 'Wysyłam polecenie do zegara…';
+                status.textContent = mode === 'off' ? tr('display.restoring') : tr('display.sending');
                 try {
                     const response = await fetch('http://' + window.location.hostname + ':8088/display-test', {
                         method: 'POST',
@@ -712,19 +710,24 @@
                     active = mode !== 'off';
                     button.classList.toggle('active', active);
                     button.setAttribute('aria-pressed', String(active));
-                    button.textContent = active ? 'Wyłącz test' : 'Włącz test';
+                    button.textContent = active ? tr('display.disable') : tr('display.enable');
                     status.classList.toggle('active', active);
                     status.textContent = active
-                        ? 'Test aktywny: ' + names[mode] + '. Widok jest wymuszony niezależnie od godziny.'
-                        : 'Automatyczny cykl dzień/noc działa normalnie.';
+                        ? tr('display.active', {mode:names[mode]})
+                        : tr('display.auto');
                 } catch (error) {
-                    status.textContent = 'Nie udało się połączyć z zegarem. Spróbuj ponownie.';
+                    status.textContent = tr('display.error');
                 } finally {
                     busy = false;
                     button.disabled = false;
                 }
             }
 
+            window.addEventListener('malina:languagechange', () => {
+                names.temp=tr('display.temp'); names.hum=tr('display.hum'); names.press=tr('display.press'); names.weather=tr('display.weather'); names.night=tr('display.night');
+                button.textContent = active ? tr('display.disable') : tr('display.enable');
+                status.textContent = active ? tr('display.active', {mode:names[select.value]}) : tr('display.auto');
+            });
             button.addEventListener('click', () => {
                 if (active) setTestMode('off');
                 else setTestMode(select.value);
@@ -755,11 +758,11 @@
                 densityValue.textContent = state.density + '%';
                 button.classList.toggle('active', enabled);
                 button.setAttribute('aria-pressed', String(enabled));
-                button.textContent = enabled ? 'Wyłącz lampkę' : 'Włącz lampkę';
+                button.textContent = enabled ? window.MalinaI18n?.t('lamp.disable') || 'Wyłącz lampkę' : window.MalinaI18n?.t('lamp.enable') || 'Włącz lampkę';
                 status.classList.toggle('active', enabled);
                 status.textContent = enabled
-                    ? 'Lampka jest włączona. Zegar i pozostałe ekrany są tymczasowo wstrzymane.'
-                    : 'Lampka wyłączona. Zegar działa normalnie.';
+                    ? window.MalinaI18n?.t('lamp.on') || 'Lampka jest włączona.'
+                    : window.MalinaI18n?.t('lamp.off') || 'Lampka wyłączona.';
             }
 
             async function sendState(nextEnabled = enabled) {
@@ -776,7 +779,7 @@
                     if (!response.ok) throw new Error('HTTP ' + response.status);
                     renderState(await response.json());
                 } catch (error) {
-                    status.textContent = 'Nie udało się zmienić trybu lampki. Sprawdź połączenie z zegarem.';
+                    status.textContent = window.MalinaI18n?.t('lamp.saveError') || 'Nie udało się zmienić trybu lampki.';
                 } finally {
                     busy = false;
                     button.disabled = false;
@@ -789,7 +792,7 @@
                     if (!response.ok) throw new Error('HTTP ' + response.status);
                     renderState(await response.json());
                 } catch (error) {
-                    status.textContent = 'Nie udało się odczytać stanu lampki z zegara.';
+                    status.textContent = window.MalinaI18n?.t('lamp.readError') || 'Nie udało się odczytać stanu lampki.';
                 }
             }
 
@@ -805,6 +808,7 @@
                 saveTimer = setTimeout(() => sendState(true), 90);
             }
 
+            window.addEventListener('malina:languagechange', loadState);
             button.addEventListener('click', () => sendState(!enabled));
             brightness.addEventListener('input', scheduleSettingsSave);
             density.addEventListener('input', scheduleSettingsSave);
@@ -816,7 +820,7 @@
             const select = document.getElementById('weather-display-style');
             const status = document.getElementById('weather-style-status');
             async function setWeatherStyle(style, initial = false) {
-                status.textContent = initial ? 'Odczytuję ustawienie…' : 'Zmieniam wygląd planszy…';
+                status.textContent = initial ? window.MalinaI18n?.t('weather.reading') || 'Odczytuję ustawienie…' : window.MalinaI18n?.t('weather.saving') || 'Zmieniam wygląd planszy…';
                 try {
                     const response = await fetch('http://' + window.location.hostname + ':8088/weather-style', initial ? { method: 'GET' } : {
                         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: style
@@ -825,12 +829,13 @@
                     const current = (await response.text()).trim();
                     select.value = current;
                     status.classList.add('active');
-                    status.textContent = current === 'icon' ? 'Wyświetlana jest ikona pogody 8×8.' : 'Wyświetlany jest skrót tekstowy (3 litery).';
+                    status.textContent = window.MalinaI18n?.t(current === 'icon' ? 'weather.currentIcon' : 'weather.currentLetters') || (current === 'icon' ? 'Wyświetlana jest ikona pogody 8×8.' : 'Wyświetlany jest skrót tekstowy (3 litery).');
                 } catch (error) {
                     status.classList.remove('active');
-                    status.textContent = 'Nie udało się zmienić ustawienia. Sprawdź połączenie z zegarem.';
+                    status.textContent = window.MalinaI18n?.t('weather.error') || 'Nie udało się zmienić ustawienia.';
                 }
             }
+            window.addEventListener('malina:languagechange', () => setWeatherStyle(select.value, true));
             select.addEventListener('change', () => setWeatherStyle(select.value));
             setWeatherStyle('letters', true);
         })();
@@ -861,9 +866,9 @@
                     const hums  = filtered.map(r => ({timestamp: r.timestamp, value: r.humidity}));
                     const press = filtered.map(r => ({timestamp: r.timestamp, value: r.pressure}));
 
-                    tempChartInst  = createOrUpdateChart('tempChart',  'scroll-temp',  'container-temp',  tempChartInst,  'Temperatura', temps,  '#e74c3c', '°C');
-                    humChartInst   = createOrUpdateChart('humChart',   'scroll-hum',   'container-hum',   humChartInst,   'Wilgotność',  hums,   '#3498db', '%');
-                    pressChartInst = createOrUpdateChart('pressChart', 'scroll-press', 'container-press', pressChartInst, 'Ciśnienie',   press,  '#2ecc71', 'hPa');
+                    tempChartInst  = createOrUpdateChart('tempChart',  'scroll-temp',  'container-temp',  tempChartInst,  window.MalinaI18n?.t('chart.label.temperature') || 'Temperatura', temps,  '#e74c3c', '°C');
+                    humChartInst   = createOrUpdateChart('humChart',   'scroll-hum',   'container-hum',   humChartInst,   window.MalinaI18n?.t('chart.label.humidity') || 'Wilgotność',  hums,   '#3498db', '%');
+                    pressChartInst = createOrUpdateChart('pressChart', 'scroll-press', 'container-press', pressChartInst, window.MalinaI18n?.t('chart.label.pressure') || 'Ciśnienie',   press,  '#2ecc71', 'hPa');
 
                     // Auto-przewiń na koniec tylko jeśli użytkownik nie przegląda ręcznie historii
                     if (!userScrolledAway) {
@@ -973,9 +978,10 @@
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const state = await response.json();
                 status.classList.toggle('active', !!state.playing);
-                status.textContent = state.playing ? '♪ Muzyka odbierana — equalizer działa na matrycy.' : (state.connected ? 'Telefon połączony. Czekam na muzykę…' : 'Malina gotowa do parowania. Wybierz ją w ustawieniach Bluetooth telefonu.');
-            } catch (error) { status.textContent = 'Nie można odczytać stanu Bluetooth.'; }
+                status.textContent = state.playing ? window.MalinaI18n?.t('audio.playing') : (state.connected ? window.MalinaI18n?.t('audio.waiting') : window.MalinaI18n?.t('audio.pair'));
+            } catch (error) { status.textContent = window.MalinaI18n?.t('audio.error') || 'Nie można odczytać stanu Bluetooth.'; }
         }
+        window.addEventListener('malina:languagechange', refreshAudioStatus);
         refreshAudioStatus();
         setInterval(refreshAudioStatus, 2500);
         init();
