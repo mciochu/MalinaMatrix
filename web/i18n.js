@@ -1,5 +1,3 @@
-[Reading 34 lines from start (total: 34 lines, 0 remaining)]
-
 (() => {
 'use strict';
 const API='http://'+window.location.hostname+':8088';
@@ -34,5 +32,7 @@ async function setLanguage(next){if(!config||!config.languages.some(item=>item.c
 async function init(){try{config=await json(API+'/i18n/config.json');const langs=config.languages||[];const codes=langs.map(x=>x.code);const fallbackCode=codes.includes(config.fallbackLanguage)?config.fallbackLanguage:(codes[0]||fallback);let saved=null;try{saved=localStorage.getItem(config.storageKey||'malina-matrix-language');}catch(_){}language=codes.includes(saved)?saved:(codes.includes(config.defaultLanguage)?config.defaultLanguage:fallbackCode);dictionaries[fallbackCode]=await json(API+'/i18n/locales/'+fallbackCode+'.json');if(language!==fallbackCode)dictionaries[language]=await json(API+'/i18n/locales/'+language+'.json');addSelector(langs);window.MalinaI18n={t,setLanguage,getLanguage:()=>language,getLocale:()=>language==='en'?'en-GB':'pl-PL'};applyStatic();window.dispatchEvent(new CustomEvent('malina:languagechange',{detail:{language,locale:language==='en'?'en-GB':'pl-PL'}}));}catch(error){console.error('Malina i18n initialization failed:',error);window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,params),getLanguage:()=>fallback,getLocale:()=>'pl-PL'};}}
 window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,params),getLanguage:()=>language,getLocale:()=>'pl-PL',setLanguage};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
+
+[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]
 
 [executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]
