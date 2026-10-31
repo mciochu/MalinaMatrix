@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 CONFIG_PATH = WEB / "config" / "languages.json"
-PLACEHOLDER_RE = re.compile(r"\\{([A-Za-z][A-Za-z0-9_]*)\\}")
-REFERENCE_RE = re.compile(r"(?:\\bt|\\btr)\\(\\s*['\"]([^'\"]+)['\"]")
+PLACEHOLDER_RE = re.compile(r"\{([A-Za-z][A-Za-z0-9_]*)\}")
+REFERENCE_RE = re.compile(r"(?:\bt|\btr)\(\s*['\"]([^'\"]+)['\"]")
 
 def fail(message: str) -> None:
     print(f"[locales] ERROR: {message}", file=sys.stderr)
