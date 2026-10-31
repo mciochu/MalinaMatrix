@@ -981,7 +981,7 @@
                 status.textContent = state.playing ? window.MalinaI18n?.t('audio.playing') : (state.connected ? window.MalinaI18n?.t('audio.waiting') : window.MalinaI18n?.t('audio.pair'));
             } catch (error) { status.textContent = window.MalinaI18n?.t('audio.error') || 'Nie można odczytać stanu Bluetooth.'; }
         }
-        window.addEventListener('malina:languagechange', refreshAudioStatus);
+        window.addEventListener('malina:languagechange', () => { loadData(); refreshAudioStatus(); });
         refreshAudioStatus();
         setInterval(refreshAudioStatus, 2500);
         init();
