@@ -49,6 +49,33 @@ def _draw_weather_icon(draw, x, y, code):
                 draw.point((x + px, y + py), fill="white")
     return True
 
+def _draw_precipitation_indicator(draw, kind, probability):
+    """Show a tiny rain/snow glyph and 0-8 pixels for Open-Meteo probability."""
+    if kind not in ("rain", "snow") or probability is None:
+        return
+    try:
+        value = max(0.0, min(100.0, float(probability)))
+    except (TypeError, ValueError):
+        return
+
+    # A 3x5 glyph fits after the temperature without disturbing the clock.
+    x, y = 49, 1
+    if kind == "snow":
+        points = ((1, 0), (0, 1), (1, 1), (2, 1), (1, 2),
+                  (0, 3), (1, 3), (2, 3), (1, 4))
+    else:
+        points = ((1, 0), (0, 1), (2, 1), (1, 2), (0, 3), (2, 3), (1, 4))
+    for px, py in points:
+        draw.point((x + px, y + py), fill="white")
+
+    # The bar visualises the source percentage; it does not alter the stored value.
+    # Any non-zero chance gets at least one LED so small probabilities remain visible.
+    segments = min(8, int((value * 8 + 99.999) // 100)) if value > 0 else 0
+    for px in range(segments):
+        draw.point((55 + px, 7), fill="white")
+
+
+
 def is_night():
     """Return whether the configured night schedule is currently active."""
     settings = get_settings()
@@ -542,12 +569,23 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                                 label = weather_label(w['code'])
                                 if web_control._weather_display_style == 'icon':
                                     if _draw_weather_icon(draw, 24, 0, w['code']):
-                                        text(draw, (38, 2), tmin + "/" + tmax, font=temp_font, fill="white")
+                                        # Keep the existing 64x8 layout compact: weather, min/max,
+                                        # then a tiny rain/snow marker and an 8-pixel probability bar.
+                                        text(draw, (34, 2), tmin + "/" + tmax, font=temp_font, fill="white")
+                                        _draw_precipitation_indicator(
+                                            draw, w.get("precipitation_kind"),
+                                            w.get("precipitation_probability"))
                                     else:
                                         text(draw, (24, 2), label, font=temp_font, fill="white")
-                                        text(draw, (43, 2), tmin + "/" + tmax, font=temp_font, fill="white")
+                                        text(draw, (34, 2), tmin + "/" + tmax, font=temp_font, fill="white")
+                                        _draw_precipitation_indicator(
+                                            draw, w.get("precipitation_kind"),
+                                            w.get("precipitation_probability"))
                                 else:
                                     text(draw, (24, 2), label + " " + tmin + "/" + tmax, font=temp_font, fill="white")
+                                    _draw_precipitation_indicator(
+                                        draw, w.get("precipitation_kind"),
+                                        w.get("precipitation_probability"))
                         elif info_display:
                             value_x = device.width - 23 if mode == 2 else device.width - 22
                             text(draw, (value_x, 3), info_display, font=sensor_font, fill="white")
