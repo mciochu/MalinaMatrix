@@ -249,5 +249,6 @@
   "ui.weatherTest.connectionError": "Could not connect to the weather module: {error}",
   "ui.weatherTest.sendError": "Test error: {error}",
   "ui.weatherTest.rain": "Rain",
-  "ui.weatherTest.probabilityHint": "Set precipitation probability from 0 to 100%."
+  "ui.weatherTest.probabilityHint": "Set precipitation probability from 0 to 100%.",
+  "ui.weatherTest.probabilityAria": "Precipitation probability in percent"
 }
