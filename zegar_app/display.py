@@ -607,9 +607,9 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                             layout = {
                                 "icon_x": layout_settings.integer("layout", "weather_icon_x", 20, 0, 56),
                                 "icon_y": layout_settings.integer("layout", "weather_icon_y", 0, 0, 0),
-                                "temp_x": layout_settings.integer("layout", "temperature_x", 31, 0, 63),
-                                "temp_y": layout_settings.integer("layout", "temperature_y", 2, 0, 7),
-                                "precipitation_icon_x": layout_settings.integer("layout", "precipitation_icon_x", 47, 0, 54),
+                                "temp_x": layout_settings.integer("layout", "temperature_x", 31, 0, 51),
+                                "temp_y": layout_settings.integer("layout", "temperature_y", 2, 0, 3),
+                                "precipitation_icon_x": layout_settings.integer("layout", "precipitation_icon_x", 47, 0, 56),
                                 "precipitation_icon_y": layout_settings.integer("layout", "precipitation_icon_y", 0, 0, 2),
                                 "precipitation_bar_x": layout_settings.integer("layout", "precipitation_bar_x", 47, 0, 54),
                                 "precipitation_bar_y": layout_settings.integer("layout", "precipitation_bar_y", 0, 0, 0),
@@ -658,8 +658,8 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                                     draw, precip_probability, precipitation_bar_x, layout["precipitation_bar_y"]
                                 )
                         elif info_display:
-                            value_x = settings.integer("layout", "info_value_x", device.width - 23 if mode == 2 else device.width - 22, 0, 63)
-                            value_y = settings.integer("layout", "info_value_y", 3, 0, 7)
+                            value_x = settings.integer("layout", "info_value_x", device.width - 23 if mode == 2 else device.width - 22, 0, 52)
+                            value_y = settings.integer("layout", "info_value_y", 3, 0, 3)
                             text(draw, (value_x, value_y), info_display, font=sensor_font, fill="white")
 
                     # Wykres 6h — ten sam obszar: x=26..43, podstawa y=7.
@@ -707,8 +707,8 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                                 spread = v_max - v_min
                                 bar_w = 1
                                 bar_gap = 0
-                                bar_start_x = settings.integer("layout", "graph_x", 20, 0, 63)
-                                baseline_y = settings.integer("layout", "graph_y", 7, 0, 7)
+                                bar_start_x = settings.integer("layout", "graph_x", 20, 0, 46)
+                                baseline_y = settings.integer("layout", "graph_y", 7, 6, 7)
 
                                 if mode == 1:
                                     # Adaptacja bazuje na ostatnich sześciu próbkach (~2 h), nie całej historii.
