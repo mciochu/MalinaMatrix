@@ -66,11 +66,11 @@ EXAMPLE_CONFIG = ROOT / "zegar.conf.example"
 if EXAMPLE_CONFIG.exists():
     section = None
     for line in EXAMPLE_CONFIG.read_text(encoding="utf-8").splitlines():
-        header = re.match(r"\\s*\\[([^]]+)\\]", line)
+        header = re.match(r"\s*\[([^]]+)\]", line)
         if header:
             section = header.group(1).strip()
             continue
-        option = re.match(r"\\s*([A-Za-z0-9_.-]+)\\s*=", line)
+        option = re.match(r"\s*([A-Za-z0-9_.-]+)\s*=", line)
         if section and option:
             key = f"config.field.{section}.{option.group(1)}"
             for code, dictionary in dictionaries.items():
