@@ -81,7 +81,7 @@ required_ui_keys = [
     "config.title", "config.subtitle", "config.search", "config.reload",
     "config.expand", "config.collapse", "config.loading",
     "config.position.title", "config.position.help", "config.position.foot",
-    "ui.weatherTest.title", "ui.weatherTest.copy",
+    "ui.weatherTest.title", "ui.weatherTest.copy", "ui.weatherTest.probabilityAria",
 ]
 for code, dictionary in dictionaries.items():
     missing = [key for key in required_ui_keys if key not in dictionary]
