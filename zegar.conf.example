@@ -137,6 +137,27 @@ info_transition_seconds = 0.14
 info_blank_seconds = 0.045
 info_frame_seconds = 0.025
 
+
+[layout]
+# Coordinates use the physical 64x8 LED canvas. X: 0-63, Y: 0-7.
+# Move the origin of each element; the content keeps its original dimensions.
+weather_icon_x = 20
+weather_icon_y = 0
+temperature_x = 31
+temperature_y = 2
+precipitation_icon_x = 48
+precipitation_icon_y = 0
+precipitation_bar_x = 47
+precipitation_bar_y = 0
+graph_x = 20
+graph_y = 7
+info_value_x = 41
+info_value_y = 3
+wifi_x = 63
+wifi_y = 0
+clock_offset_x = 0
+clock_offset_y = 0
+
 [assets]
 # Add 1-bit JSON bitmap images to this directory.
 images_dir = zegar_app/assets/images
