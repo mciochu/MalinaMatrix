@@ -250,5 +250,20 @@
   "ui.weatherTest.sendError": "Test error: {error}",
   "ui.weatherTest.rain": "Rain",
   "ui.weatherTest.probabilityHint": "Set precipitation probability from 0 to 100%.",
-  "ui.weatherTest.probabilityAria": "Precipitation probability in percent"
+  "ui.weatherTest.probabilityAria": "Precipitation probability in percent",
+  "api.error.invalidSettingName": "Invalid setting name",
+  "api.error.invalidValue": "Invalid value",
+  "api.error.valueTooLong": "Value is too long or contains invalid characters",
+  "api.error.unknownSetting": "Unknown setting",
+  "api.error.booleanRequired": "Expected a true/false value",
+  "api.error.integerRequired": "An integer is required",
+  "api.error.numberRequired": "A number is required",
+  "api.error.outOfRange": "Number out of range",
+  "api.error.weatherStyle": "Allowed values: icon or letters",
+  "api.error.coordinateInteger": "Coordinate must be an integer",
+  "api.error.coordinateRange": "Allowed range: {range}",
+  "api.error.screenOrder": "Invalid screen order",
+  "api.error.sensorDriver": "Unknown sensor driver",
+  "api.error.requestSize": "Invalid request size",
+  "api.error.jsonObject": "Expected a JSON object"
 }
