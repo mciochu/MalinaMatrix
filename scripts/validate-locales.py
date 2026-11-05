@@ -59,6 +59,35 @@ for code, dictionary in dictionaries.items():
         if base_vars != vars_here:
             fail(f"{code}.{key}: placeholder mismatch {base_vars} != {vars_here}")
 
+# Every configurable option exposed by the dashboard must have a label in
+# every supported language. This catches dynamic keys that static JS scanning
+# cannot see (for example config.field.<section>.<key>).
+EXAMPLE_CONFIG = ROOT / "zegar.conf.example"
+if EXAMPLE_CONFIG.exists():
+    section = None
+    for line in EXAMPLE_CONFIG.read_text(encoding="utf-8").splitlines():
+        header = re.match(r"\\s*\\[([^]]+)\\]", line)
+        if header:
+            section = header.group(1).strip()
+            continue
+        option = re.match(r"\\s*([A-Za-z0-9_.-]+)\\s*=", line)
+        if section and option:
+            key = f"config.field.{section}.{option.group(1)}"
+            for code, dictionary in dictionaries.items():
+                if key not in dictionary:
+                    fail(f"{code}: missing dashboard setting label {key}")
+
+required_ui_keys = [
+    "config.title", "config.subtitle", "config.search", "config.reload",
+    "config.expand", "config.collapse", "config.loading",
+    "config.position.title", "config.position.help", "config.position.foot",
+    "ui.weatherTest.title", "ui.weatherTest.copy",
+]
+for code, dictionary in dictionaries.items():
+    missing = [key for key in required_ui_keys if key not in dictionary]
+    if missing:
+        fail(f"{code}: missing dashboard UI translations {missing}")
+
 source_files = [WEB / "i18n.js", WEB / "message-studio.js", WEB / "index.html"]
 references = set()
 for source in source_files:
