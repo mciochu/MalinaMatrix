@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 from .config import get_settings
 
 _settings = get_settings()
-WEATHER_LAT = _settings.number("weather", "latitude", 0.0, -90.0, 90.0)
-WEATHER_LON = _settings.number("weather", "longitude", 0.0, -180.0, 180.0)
+WEATHER_LAT = _settings.number("weather", "latitude", 50.98, -90.0, 90.0)
+WEATHER_LON = _settings.number("weather", "longitude", 21.24, -180.0, 180.0)
 WEATHER_CACHE_SECONDS = _settings.integer("weather", "cache_seconds", 1800, 60, 86400)
 WEATHER_RETRY_SECONDS = _settings.integer("weather", "retry_seconds", 300, 30, 86400)
 WEATHER_TIMEOUT = _settings.number("weather", "request_timeout_seconds", 5.0, 1.0, 60.0)
@@ -94,7 +94,6 @@ def select_precipitation_forecast(hourly, current_hour):
         else:
             continue
 
-        # Keep the first hour in a tie, so the result is stable and chronological.
         if best is None or probability > best["probability"]:
             best = {"probability": probability, "kind": kind, "time": forecast_time}
 
@@ -128,7 +127,6 @@ def get_weather():
 
         daily = data.get("daily", {})
         hourly = data.get("hourly", {})
-        # Open-Meteo returns the local UTC offset for the forecast location.
         offset = data.get("utc_offset_seconds", 0)
         try:
             local_now = datetime.now(timezone.utc) + timedelta(seconds=int(offset))
@@ -201,3 +199,5 @@ def get_weather_nonblocking():
         "precipitation_kind": None,
         "precipitation_time": None,
     }
+
+[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]

@@ -13,7 +13,7 @@ from luma.core.legacy.font import proportional, LCD_FONT, TINY_FONT
 
 from .fonts import load_bdf_legacy_font, list_available_fonts
 from .config import get_settings
-from .history import init_db, export_json_for_web, log_to_db, get_hourly_averages
+from .history import init_db, export_json_for_web, log_to_db, get_hourly_averages, refresh_hourly_cache
 from .network import check_internet
 from .system_utils import is_time_synced
 from .weather import weather_label, get_weather_nonblocking
@@ -39,9 +39,10 @@ def _weather_icon_name(code):
 
 
 def _draw_weather_icon(draw, x, y, code):
-    """Narysuj ikonę LED 8x8 w obszarze planszy pogody."""
+    """Draw the main weather-condition icon (sun/cloud/rain/snow/storm)."""
     icon = _WEATHER_ICONS.get(_weather_icon_name(code))
-    if icon is None: return False
+    if icon is None:
+        return False
     for py in range(8):
         row = (icon >> (8 * py)) & 0xFF
         for px in range(8):
@@ -49,32 +50,58 @@ def _draw_weather_icon(draw, x, y, code):
                 draw.point((x + px, y + py), fill="white")
     return True
 
-def _draw_precipitation_indicator(draw, kind, probability):
-    """Show a tiny rain/snow glyph and 0-8 pixels for Open-Meteo probability."""
-    if kind not in ("rain", "snow") or probability is None:
-        return
+
+def _draw_precipitation_type_icon(draw, kind, x=47, y=0):
+    """Draw the dedicated mini rain/snow glyph above the precipitation bar."""
+    icon_names = {
+        "rain": "MINI_DESZCZ",
+        "snow": "MINI_SNOW",
+    }
+    icon_name = icon_names.get(kind)
+    if icon_name is None:
+        return False
+    icon = _WEATHER_ICONS.get(icon_name)
+    if icon is None:
+        return False
+
+    # Mini glyphs are placed directly above the bar; the bar owns row 6.
+    for py in range(6):
+        row = (icon >> (8 * py)) & 0xFF
+        for px in range(8):
+            if (row >> px) & 1:
+                draw.point((x + px, y + py), fill="white")
+    return True
+
+
+def _draw_precipitation_indicator(draw, probability, x=47, y=0):
+    """Draw a 10-pixel-wide precipitation bar with 3-pixel end walls.
+
+    Two vertical end walls frame the eight-pixel percentage track.
+    The track fills from left to right in 12.5 percentage-point steps.
+    Unknown probability and 0% leave the inner track empty.
+    """
     try:
-        value = max(0.0, min(100.0, float(probability)))
+        value = float(probability) if probability is not None else 0.0
     except (TypeError, ValueError):
-        return
-
-    # A 3x5 glyph fits after the temperature without disturbing the clock.
-    x, y = 49, 1
-    if kind == "snow":
-        points = ((1, 0), (0, 1), (1, 1), (2, 1), (1, 2),
-                  (0, 3), (1, 3), (2, 3), (1, 4))
-    else:
-        points = ((1, 0), (0, 1), (2, 1), (1, 2), (0, 3), (2, 3), (1, 4))
-    for px, py in points:
-        draw.point((x + px, y + py), fill="white")
-
-    # The bar visualises the source percentage; it does not alter the stored value.
-    # Any non-zero chance gets at least one LED so small probabilities remain visible.
+        value = 0.0
+    if value != value or value in (float("inf"), float("-inf")):
+        value = 0.0
+    value = max(0.0, min(100.0, value))
     segments = min(8, int((value * 8 + 99.999) // 100)) if value > 0 else 0
-    for px in range(segments):
-        draw.point((55 + px, 7), fill="white")
 
+    # Permanent 3-pixel vertical walls at both ends: x and x+9.
+    for wall_y in (5, 6, 7):
+        draw.point((x, y + wall_y), fill="white")
+        draw.point((x + 9, y + wall_y), fill="white")
 
+    # The source bitmap is 00 00 00 00 00 00 ff 00 (eight-pixel inner track).
+    template = _WEATHER_ICONS.get("PRECIPITATION_BAR", 0x00ff000000000000)
+    template_row = (template >> (8 * 6)) & 0xFF
+    filled_row = template_row & ((1 << segments) - 1)
+    for px in range(8):
+        if (filled_row >> px) & 1:
+            draw.point((x + 1 + px, y + 6), fill="white")
+    return segments
 
 def is_night():
     """Return whether the configured night schedule is currently active."""
@@ -243,12 +270,18 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
     if history_enabled:
         def prepare_history():
             stage_started = time.monotonic()
-            init_db()
-            print(f"[STARTUP] database initialized in {time.monotonic() - stage_started:.2f}s", file=sys.stderr)
+            database_ready = init_db()
+            print(f"[STARTUP] database initialized={database_ready} in {time.monotonic() - stage_started:.2f}s", file=sys.stderr)
+            if database_ready and graph_enabled:
+                graph_hours = settings.integer("history", "graph_hours", 6, 1, 168)
+                graph_started = time.monotonic()
+                graph_ready = refresh_hourly_cache(graph_hours)
+                print(f"[STARTUP] LED history cache ready={graph_ready} in {time.monotonic() - graph_started:.2f}s", file=sys.stderr)
             if settings.boolean("history", "export_on_start", True):
                 stage_started = time.monotonic()
-                export_json_for_web()
-                print(f"[STARTUP] history exported in {time.monotonic() - stage_started:.2f}s", file=sys.stderr)
+                export_ok = export_json_for_web()
+                label = "history JSON exported" if export_ok else "history JSON export skipped; existing data.json preserved"
+                print(f"[STARTUP] {label} in {time.monotonic() - stage_started:.2f}s", file=sys.stderr)
             history_ready.set()
         threading.Thread(target=prepare_history, daemon=True, name="history-init").start()
     else:
@@ -448,8 +481,11 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                         press = env_data.get('press')
                         if temp is not None or hum is not None or press is not None:
                             def persist_reading(sample_temp=temp, sample_hum=hum, sample_press=press):
-                                log_to_db(sample_temp, sample_hum, sample_press)
-                                export_json_for_web()
+                                # SQLite is the source of truth; publish the graph cache outside the display loop.
+                                # Legacy JSON publication is a separate, permission-gated operation.
+                                if log_to_db(sample_temp, sample_hum, sample_press) and graph_enabled:
+                                    graph_hours = settings.integer("history", "graph_hours", 6, 1, 168)
+                                    refresh_hourly_cache(graph_hours)
 
                             # Zapis historii nie może blokować odświeżania godziny.
                             threading.Thread(
@@ -557,38 +593,74 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                     text(draw, (tx, ty), clock_display, font=temp_font, fill="white")
                 else:
                     # ----- TRYB DZIENNY: zegar + wykres + dane -----
-                    flip_clock.draw(draw, (0, max(0, device.height - 8)), text, textsize, time_font, fill="white") if FLIP_CLOCK_ENABLED else text(draw, (0, max(0, device.height - 8)), clock_display, font=time_font, fill="white")
+                    clock_x = settings.integer("layout", "clock_offset_x", 0, -63, 63)
+                    clock_y = settings.integer("layout", "clock_offset_y", 0, -7, 7)
+                    clock_position = (clock_x, max(0, min(device.height - 1, device.height - 8 + clock_y)))
+                    flip_clock.draw(draw, clock_position, text, textsize, time_font, fill="white") if FLIP_CLOCK_ENABLED else text(draw, clock_position, clock_display, font=time_font, fill="white")
 
                     if info_transition.visible():
                         if info_display == "__POGODA__" and modules["weather"]:
                             # Pogoda: skrót + min/max temperatura
                             w = get_weather_nonblocking()
+                            preview = web_control._weather_preview
+                            layout_settings = get_settings()
+                            layout = {
+                                "icon_x": layout_settings.integer("layout", "weather_icon_x", 20, 0, 56),
+                                "icon_y": layout_settings.integer("layout", "weather_icon_y", 0, 0, 0),
+                                "temp_x": layout_settings.integer("layout", "temperature_x", 31, 0, 63),
+                                "temp_y": layout_settings.integer("layout", "temperature_y", 2, 0, 7),
+                                "precipitation_icon_x": layout_settings.integer("layout", "precipitation_icon_x", 47, 0, 54),
+                                "precipitation_icon_y": layout_settings.integer("layout", "precipitation_icon_y", 0, 0, 2),
+                                "precipitation_bar_x": layout_settings.integer("layout", "precipitation_bar_x", 47, 0, 54),
+                                "precipitation_bar_y": layout_settings.integer("layout", "precipitation_bar_y", 0, 0, 0),
+                            }
+                            if (preview.get("enabled") and preview.get("kind") is not None) or (
+                                preview.get("enabled") and preview.get("probability") == 0
+                            ):
+                                w = dict(w)
+                                w["precipitation_kind"] = preview.get("kind")
+                                w["precipitation_probability"] = preview.get("probability")
+                                if preview.get("kind") is None:
+                                    w["code"] = 3
                             if w['temp_max'] is not None:
                                 tmin = "{:.0f}".format(w['temp_min']) if w['temp_min'] is not None else "--"
                                 tmax = "{:.0f}".format(w['temp_max']) if w['temp_max'] is not None else "--"
                                 label = weather_label(w['code'])
+                                precip_kind = w.get("precipitation_kind")
+                                precip_probability = w.get("precipitation_probability")
+                                try:
+                                    probability_value = float(precip_probability or 0)
+                                except (TypeError, ValueError):
+                                    probability_value = 0.0
+                                has_precipitation = (
+                                    precip_kind in ("rain", "snow") and probability_value > 0
+                                )
+                                icon_code = w['code'] if has_precipitation else 3
+                                icon_x = layout["icon_x"]
+                                temp_x, temp_y = layout["temp_x"], layout["temp_y"]
+                                precipitation_bar_x = layout["precipitation_bar_x"]
                                 if web_control._weather_display_style == 'icon':
-                                    if _draw_weather_icon(draw, 24, 0, w['code']):
-                                        # Keep the existing 64x8 layout compact: weather, min/max,
-                                        # then a tiny rain/snow marker and an 8-pixel probability bar.
-                                        text(draw, (34, 2), tmin + "/" + tmax, font=temp_font, fill="white")
-                                        _draw_precipitation_indicator(
-                                            draw, w.get("precipitation_kind"),
-                                            w.get("precipitation_probability"))
+                                    if _draw_weather_icon(draw, icon_x, layout["icon_y"], icon_code):
+                                        text(draw, (temp_x, temp_y), tmin + "/" + tmax, font=temp_font, fill="white")
                                     else:
-                                        text(draw, (24, 2), label, font=temp_font, fill="white")
-                                        text(draw, (34, 2), tmin + "/" + tmax, font=temp_font, fill="white")
-                                        _draw_precipitation_indicator(
-                                            draw, w.get("precipitation_kind"),
-                                            w.get("precipitation_probability"))
+                                        text(draw, (icon_x, temp_y), label, font=temp_font, fill="white")
+                                        text(draw, (temp_x, temp_y), tmin + "/" + tmax, font=temp_font, fill="white")
                                 else:
-                                    text(draw, (24, 2), label + " " + tmin + "/" + tmax, font=temp_font, fill="white")
-                                    _draw_precipitation_indicator(
-                                        draw, w.get("precipitation_kind"),
-                                        w.get("precipitation_probability"))
+                                    text(draw, (icon_x, temp_y), label + " " + tmin + "/" + tmax, font=temp_font, fill="white")
+
+                                # Rodzaj opadów ma własną mini-ikonę nad paskiem procentowym.
+                                # Główna ikona pogody pozostaje niezależna od tych dwóch bitmap.
+                                _draw_precipitation_type_icon(
+                                    draw, precip_kind if has_precipitation else None,
+                                    layout["precipitation_icon_x"], layout["precipitation_icon_y"]
+                                )
+                                _draw_precipitation_indicator(
+                                    draw, precip_probability, precipitation_bar_x, layout["precipitation_bar_y"]
+                                )
                         elif info_display:
-                            value_x = device.width - 23 if mode == 2 else device.width - 22
-                            text(draw, (value_x, 3), info_display, font=sensor_font, fill="white")
+                            value_x = settings.integer("layout", "info_value_x", device.width - 23 if mode == 2 else device.width - 22, 0, 63)
+                            value_y = settings.integer("layout", "info_value_y", 3, 0, 7)
+                            text(draw, (value_x, value_y), info_display, font=sensor_font, fill="white")
 
                     # Wykres 6h — ten sam obszar: x=26..43, podstawa y=7.
                     # Puste przedziały pozostają puste, aby historia nie przesuwała się w bok.
@@ -635,8 +707,8 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                                 spread = v_max - v_min
                                 bar_w = 1
                                 bar_gap = 0
-                                bar_start_x = 20
-                                baseline_y = 7
+                                bar_start_x = settings.integer("layout", "graph_x", 20, 0, 63)
+                                baseline_y = settings.integer("layout", "graph_y", 7, 0, 7)
 
                                 if mode == 1:
                                     # Adaptacja bazuje na ostatnich sześciu próbkach (~2 h), nie całej historii.
@@ -758,7 +830,8 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
                 # Wi-Fi indicator is optional and only shown in day mode.
                 if modules["wifi_indicator"] and not night and not audio_active:
                     has_internet = check_internet()
-                    wx, wy = device.width - 1, 0
+                    wx = settings.integer("layout", "wifi_x", device.width - 1, 0, 63)
+                    wy = settings.integer("layout", "wifi_y", 0, 0, 7)
                     if has_internet:
                         draw.point((wx, wy), fill="white")
                     elif (time.time() % 2.0) < 0.3:
@@ -789,3 +862,5 @@ def run_clock(n, block_orientation, rotate, inreverse, show_seconds, blink=True,
         module_manager.close()
         if previous_sigterm_handler is not None:
             signal.signal(signal.SIGTERM, previous_sigterm_handler)
+
+[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]

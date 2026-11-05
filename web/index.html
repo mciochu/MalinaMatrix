@@ -7,9 +7,6 @@
     <meta name="theme-color" content="#080e19">
     <meta name="description" content="Domowa stacja pomiarowa BME280 — aktualne odczyty i historia temperatury, wilgotności oraz ciśnienia.">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="i18n.js" defer></script>
-    <link rel="stylesheet" href="message-studio.css">
-    <script src="message-studio.js" defer></script>
     <style>
         :root {
             color-scheme: dark;
@@ -49,6 +46,56 @@
             color:#bdcce4; font-size:.76rem; font-weight:650; white-space:nowrap;
         }
         .sensor-dot { width:7px; height:7px; background:#8ba8ff; border-radius:50%; box-shadow:0 0 12px rgba(139,168,255,.35); }
+        .lamp-quick-toggle { display:grid; place-items:center; width:44px; height:44px; flex:0 0 44px; margin-left:auto; border:1px solid rgba(255,218,130,.3); border-radius:14px; color:#ffd98a; background:rgba(255,205,104,.09); cursor:pointer; transition:background .18s,border-color .18s,transform .18s; }
+        .lamp-quick-toggle svg { width:23px; height:23px; }
+        .lamp-quick-toggle.active { color:#241806; background:linear-gradient(135deg,#ffe4a3,#f4bd5b); border-color:#ffe4a3; box-shadow:0 0 18px rgba(255,205,104,.2); }
+        .lamp-quick-toggle:disabled { opacity:.6; cursor:wait; }
+        .dashboard-tabs { display:flex; gap:7px; margin:0 2px 22px; padding:5px; border:1px solid var(--border); border-radius:15px; background:rgba(17,27,44,.72); }
+        .dashboard-tab { min-height:42px; flex:1; padding:9px 14px; border:1px solid transparent; border-radius:11px; color:#98a9c2; background:transparent; font-size:.84rem; font-weight:750; cursor:pointer; }
+        
+        .dashboard-tab.active { color:#14213a; background:#dbe6ff; border-color:#dbe6ff; }
+        body:not([data-dashboard-tab="tests"]) #panel-tests, body:not([data-dashboard-tab="config"]) #panel-config { display:none; }
+        body[data-dashboard-tab="tests"] .container > section:not(#panel-tests), body[data-dashboard-tab="config"] .container > section:not(#panel-config) { display:none; }
+        body[data-dashboard-tab="tests"] .dashboard-tabs, body[data-dashboard-tab="config"] .dashboard-tabs { margin-bottom:18px; }
+        .config-panel { margin:0 0 28px; min-width:0; }
+        .config-toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:center; margin:0 0 12px; }
+        .config-search { width:100%; min-width:0; min-height:44px; padding:10px 13px; border:1px solid var(--border); border-radius:12px; background:#101a2b; color:var(--text); }
+        .config-action { min-height:42px; padding:9px 12px; border:1px solid rgba(139,168,255,.32); border-radius:11px; background:rgba(139,168,255,.12); color:#dce6ff; font-weight:750; cursor:pointer; white-space:nowrap; }
+        .config-summary { grid-column:1/-1; color:var(--muted); font-size:.74rem; overflow-wrap:anywhere; }
+        .config-group { margin:0 0 10px; overflow:hidden; border:1px solid var(--border); border-radius:15px; background:var(--surface); }
+        .config-group summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 15px; cursor:pointer; font-weight:780; list-style:none; }
+        .config-group summary::-webkit-details-marker { display:none; }
+        .config-group summary:after { content:"＋"; color:#9fb5e8; }
+        .config-group[open] summary:after { content:"−"; }
+        .config-count { color:var(--muted); font-size:.72rem; font-weight:600; }
+        .config-fields { padding:0 15px 12px; }
+        .config-field { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,38%); gap:10px; align-items:center; padding:10px 0; border-top:1px solid rgba(166,190,224,.08); }
+        .config-field-info { min-width:0; }
+        .config-field-name { display:block; color:#e8efff; font-size:.82rem; font-weight:700; overflow-wrap:anywhere; }
+        .config-field-meta { margin-top:3px; color:var(--muted); font-size:.66rem; overflow-wrap:anywhere; }
+        .config-tag { display:inline-block; padding:2px 6px; border-radius:6px; background:rgba(139,168,255,.11); color:#b9caff; font-size:.65rem; }
+        .config-tag.restart { background:rgba(255,190,112,.1); color:#ffd39a; }
+        .config-input { width:100%; min-width:0; min-height:38px; padding:7px 9px; border:1px solid #304058; border-radius:9px; outline:none; background:#0b1422; color:var(--text); font:inherit; font-size:.8rem; }
+        .config-input:focus { border-color:#8ba8ff; box-shadow:0 0 0 3px rgba(139,168,255,.12); }
+        .config-save-state { min-height:13px; margin-top:3px; color:#8fa5c8; font-size:.65rem; text-align:right; overflow-wrap:anywhere; }
+        .config-save-state.ok { color:#6ee7b7; } .config-save-state.err { color:#ff9e91; }
+        .position-editor { margin:0 0 12px; padding:12px; border:1px solid rgba(139,168,255,.2); border-radius:13px; background:rgba(10,18,31,.62); }
+        .position-editor h3 { margin:0 0 5px; font-size:.9rem; }
+        .position-help { margin:0 0 10px; color:var(--muted); font-size:.72rem; line-height:1.4; }
+        .position-tools { display:grid; grid-template-columns:minmax(0,1fr) 72px 72px; gap:8px; align-items:end; margin-bottom:10px; }
+        .position-tools label { display:block; color:var(--muted); font-size:.68rem; }
+        .position-tools select,.position-tools input { width:100%; min-width:0; margin-top:4px; min-height:39px; padding:6px 8px; border:1px solid #304058; border-radius:9px; background:#0b1422; color:var(--text); }
+        .position-canvas-wrap { width:100%; min-width:0; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; border:1px solid #33435d; border-radius:9px; background:#07101d; padding:8px; }
+        #position-canvas { display:block; width:678px; max-width:none; height:110px; touch-action:pan-x pan-y; cursor:crosshair; }
+        .position-foot { margin-top:7px; color:var(--muted); font-size:.67rem; }
+        .config-field[hidden],.config-group[hidden] { display:none !important; }
+        @media(max-width:650px){.config-toolbar{grid-template-columns:minmax(0,1fr) auto}.config-toolbar .config-action:last-of-type{grid-column:2}.config-search{grid-column:1/-1}.config-field{grid-template-columns:minmax(0,1fr) minmax(112px,42%);gap:7px;padding:9px 0}.config-input{min-height:42px}.config-fields{padding:0 11px 10px}.config-group summary{padding:13px}.position-editor{padding:10px}.position-tools{grid-template-columns:minmax(0,1fr) 58px 58px}}
+
+        .dashboard-tab:focus-visible,.lamp-quick-toggle:focus-visible { outline:2px solid #b8cbff; outline-offset:3px; }
+        body:not([data-dashboard-tab="tests"]) #panel-tests { display:none; }
+        body[data-dashboard-tab="tests"] .container > section:not(#panel-tests) { display:none; }
+        body[data-dashboard-tab="tests"] .dashboard-tabs { margin-bottom:18px; }
+        .lamp-settings-card { margin-top:30px; }
         .section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:0 2px 13px; }
         .section-heading h2 { margin:0; font-size:1rem; letter-spacing:-.02em; }
         .section-heading p { margin:5px 0 0; color:var(--muted); font-size:.78rem; }
@@ -161,7 +208,8 @@
         @media (max-width:650px) {
             body { padding:max(14px,env(safe-area-inset-top)) 13px max(22px,env(safe-area-inset-bottom)); }
             .page-header { flex-wrap:wrap; align-items:flex-start; margin:2px 2px 21px; padding:0 0 15px; gap:8px; }
-            .brand { gap:10px; }
+            .brand { flex:1 1 100%; width:100%; gap:10px; }
+            .lamp-quick-toggle { margin-left:auto; width:40px; height:40px; flex-basis:40px; }
             .brand-mark { width:42px; height:42px; flex-basis:42px; border-radius:14px; }
             .brand-mark svg { width:22px; height:22px; }
             .eyebrow { font-size:.6rem; letter-spacing:.13em; }
@@ -197,6 +245,8 @@
             #container-temp,#container-hum,#container-press { width:100% !important; min-width:100% !important; }
             .display-test-card { margin-top:14px; padding:14px 12px; border-radius:17px; }
             .lamp-card { margin-top:14px; padding:14px 12px; border-radius:17px; }
+            .dashboard-tabs { margin-bottom:17px; }
+            .dashboard-tab { min-height:40px; padding:8px 9px; font-size:.77rem; }
             .lamp-toggle { min-height:46px; }
             .display-test-controls { flex-direction:column; }
             .display-test-select,.display-test-btn { width:100%; min-height:44px; }
@@ -218,6 +268,46 @@
         }
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; } }
     </style>
+
+    <style id="message-studio-inline">
+/* Prosty, mobilny panel komunikatów LED */
+.message-studio{margin:14px 0 20px;padding:17px;border:1px solid rgba(139,168,255,.2);border-radius:18px;background:linear-gradient(145deg,rgba(23,35,58,.96),rgba(10,17,30,.98));box-shadow:0 10px 26px rgba(0,0,0,.16)}
+.message-studio-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 13px}
+.message-studio-title{margin:0;color:#f1f5ff;font-size:1.05rem;font-weight:800;letter-spacing:-.025em}
+.message-studio-copy{margin:4px 0 0;color:#92a2bd;font-size:.77rem;line-height:1.4}
+.ms-editor{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:13px;align-items:end}
+.ms-field{min-width:0;margin:0}
+.ms-label{display:block;margin:0 0 6px;color:#c5d2e6;font-size:.76rem;font-weight:750}
+.ms-textarea{display:block;width:100%;min-height:68px;max-height:120px;padding:10px 12px;resize:vertical;border:1px solid #34445f;border-radius:11px;outline:none;background:#091322;color:#f2f5ff;font:500 .93rem/1.4 system-ui,sans-serif}
+.ms-textarea:focus,.ms-duration:focus,.ms-font:focus{border-color:#9ab1ff;box-shadow:0 0 0 3px rgba(139,168,255,.12)}
+.ms-count{display:block;margin-top:4px;color:#7587a3;text-align:right;font-size:.66rem}
+.ms-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.ms-mode{min-height:42px;padding:8px 7px;border:1px solid rgba(166,190,224,.17);border-radius:10px;background:rgba(255,255,255,.035);color:#b9c7dd;font-size:.75rem;font-weight:750;line-height:1.2;cursor:pointer}
+.ms-mode[aria-pressed="true"]{border-color:#91aaff;background:rgba(139,168,255,.16);color:#eef3ff;box-shadow:inset 0 0 0 1px rgba(139,168,255,.14)}
+.ms-duration{width:100%;min-height:42px;padding:8px 10px;border:1px solid #34445f;border-radius:10px;outline:none;background:#0b1728;color:#eef3ff;font:inherit;font-size:.82rem}
+.ms-font{width:100%;min-height:42px;padding:8px 10px;border:1px solid #34445f;border-radius:10px;outline:none;background:#0b1728;color:#eef3ff;font:inherit;font-size:.82rem}
+.ms-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.ms-action{min-height:43px;padding:10px 12px;border:1px solid transparent;border-radius:10px;font-size:.8rem;font-weight:850;cursor:pointer}
+.ms-action:disabled{opacity:.55;cursor:wait}
+.ms-action.primary{color:#0c1730;background:linear-gradient(135deg,#c7d6ff,#87a4ff)}
+.ms-action.secondary{color:#ffd6d6;border-color:rgba(255,123,123,.25);background:rgba(170,57,69,.13)}
+.ms-status{min-height:17px;margin:9px 1px 0;color:#8d9db6;font-size:.72rem;line-height:1.4}
+.ms-status.ok{color:#74e2bd}.ms-status.err{color:#ff9e9e}
+@media(max-width:680px){
+ .message-studio{margin:11px 0 16px;padding:13px 11px;border-radius:15px}
+ .message-studio-head{margin-bottom:10px}
+ .message-studio-title{font-size:1rem}
+ .message-studio-copy{font-size:.72rem}
+ .ms-editor{grid-template-columns:minmax(0,1fr);gap:9px}
+ .ms-textarea{min-height:58px;max-height:92px;padding:9px 10px;font-size:.9rem}
+ .ms-options{gap:5px;margin:10px 0}
+ .ms-mode{min-height:40px;padding:7px 4px;font-size:.69rem}
+ .ms-duration,.ms-font{min-height:40px}
+ .ms-actions{gap:7px;margin-top:10px}
+ .ms-action{min-height:42px;padding:9px 7px;font-size:.75rem}
+}
+@media(max-width:360px){.ms-mode{font-size:.64rem}.ms-action{font-size:.7rem}}
+</style>
 </head>
 <body>
     <div class="container">
@@ -234,10 +324,19 @@
                     <p class="subtitle">Temperatura, wilgotność i ciśnienie</p>
                 </div>
             </div>
+            <button type="button" class="lamp-quick-toggle" id="lamp-toggle" aria-label="Lampka" title="Lampka" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M8.2 14.5a7 7 0 1 1 7.6 0c-.8.5-1.3 1.2-1.5 2H9.7c-.2-.8-.7-1.5-1.5-2Z"/><path d="M12 2v2M4.9 4.9l1.4 1.4M2 12h2M20 12h2M17.7 6.3l1.4-1.4"/></svg>
+            </button>
             <div class="sensor-pill"><span class="sensor-dot"></span> BME280</div>
         </header>
 
-        <section aria-label="Aktualne pomiary">
+        <nav class="dashboard-tabs" role="tablist" aria-label="Sekcje panelu">
+            <button type="button" class="dashboard-tab active" id="tab-live" role="tab" aria-selected="true" aria-controls="panel-live" data-tab="live">Pomiary</button>
+            <button type="button" class="dashboard-tab" id="tab-tests" role="tab" aria-selected="false" aria-controls="panel-tests" data-tab="tests">Testy</button>
+            <button type="button" class="dashboard-tab" id="tab-config" role="tab" aria-selected="false" aria-controls="panel-config" data-tab="config">Konfiguracja</button>
+        </nav>
+
+        <section id="panel-live" aria-label="Aktualne pomiary">
             <div class="section-heading"><div><h2>Aktualne odczyty</h2><p>Ostatnie zapisane wartości</p></div></div>
             <div class="stats-grid">
                 <div class="stat-card temp">
@@ -304,7 +403,7 @@
             </div>
         </section>
 
-        <section class="display-test-card" aria-label="Test wyświetlacza zegara">
+        <section class="display-test-card" id="panel-tests" role="tabpanel" aria-labelledby="tab-tests" aria-label="Testy i diagnostyka">
             <div class="display-test-head">
                 <div class="display-test-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8h3v3H7zM14 8h3M14 11h3M7 15h10"/></svg>
@@ -331,17 +430,30 @@
                 </select>
                 <div class="display-test-status" id="weather-style-status" role="status" aria-live="polite">Aktualny wygląd planszy pogody.</div>
             </div>
+            <div class="weather-lab" id="weather-lab" style="margin-top:16px;padding:15px;border:1px solid var(--border);border-radius:16px;background:rgba(10,20,34,.72)">
+                <div style="font-size:.9rem;font-weight:800;margin-bottom:5px">Test opadów</div>
+                <p style="margin:0 0 12px;color:var(--muted);font-size:.78rem;line-height:1.45">Wybierz dane rzeczywiste albo wymuś rodzaj opadu i jego prawdopodobieństwo na matrycy.</p>
+                <div class="display-test-controls">
+                    <select class="display-test-select" id="weather-preview-kind" aria-label="Rodzaj opadu">
+                        <option value="live">Pogoda na żywo</option>
+                        <option value="none">Brak opadów</option>
+                        <option value="rain">Deszcz</option>
+                        <option value="snow">Śnieg</option>
+                    </select>
+                    <input class="display-test-select" id="weather-preview-percent" type="number" min="0" max="100" step="1" value="70" aria-label="Prawdopodobieństwo opadów w procentach" style="max-width:105px" />
+                    <button type="button" class="display-test-btn" id="weather-preview-toggle" aria-pressed="false">Włącz test</button>
+                </div>
+                <div class="display-test-status" id="weather-preview-status" role="status" aria-live="polite">Test wyłączony — wyświetlane są dane pogodowe.</div>
+            </div>
         </section>
 
-        <section class="lamp-card" aria-label="Lampka matrycy LED">
+        <section class="lamp-card lamp-settings-card" aria-label="Ustawienia lampki LED">
             <div class="lamp-head">
                 <div class="lamp-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M8.2 14.5a7 7 0 1 1 7.6 0c-.8.5-1.3 1.2-1.5 2H9.7c-.2-.8-.7-1.5-1.5-2Z"/><path d="M12 2v2M4.9 4.9l1.4 1.4M2 12h2M20 12h2M17.7 6.3l1.4-1.4"/></svg>
                 </div>
-                <div><h2 class="lamp-title">Lampka LED</h2><p class="subtitle">Zmień całą matrycę w regulowane źródło światła.</p></div>
+                <div><h2 class="lamp-title">Ustawienia lampki</h2><p class="subtitle">Regulacja jasności i gęstości świecących pikseli.</p></div>
             </div>
-            <p class="lamp-copy">Uruchamia się wyłącznie po kliknięciu. Jasność reguluje moc świecenia sterowników, a gęstość pikseli pozwala stopniowo wygaszać punkty LED.</p>
-            <button type="button" class="lamp-toggle" id="lamp-toggle" aria-pressed="false">Włącz lampkę</button>
             <div class="lamp-control">
                 <div class="lamp-control-top"><label for="lamp-brightness">Jasność świecenia</label><output id="lamp-brightness-value" for="lamp-brightness">100%</output></div>
                 <input class="lamp-range" type="range" id="lamp-brightness" min="0" max="100" step="1" value="100">
@@ -407,21 +519,83 @@
     <div class="ms-status" id="ms-status" role="status" aria-live="polite">Łączę z Maliną…</div>
 </section>
 
-        <section class="msg-card" aria-label="Wiadomość na zegar">
-            <div class="msg-panel-toggle" id="msg-toggle">
-                <span class="msg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m7 10 3 2 3-2M7 14h10"/></svg></span>
-                <span>Wyślij tekst na wyświetlacz</span><span class="arrow">▶</span>
-            </div>
-            <div class="msg-panel" id="msg-panel">
-                <div class="msg-row"><input type="text" class="msg-input" id="msg-input" placeholder="Wpisz wiadomość..." maxlength="100" aria-label="Tekst do wyświetlenia"><button class="msg-send-btn" id="msg-send">Wyślij</button></div>
-                <div class="msg-status" id="msg-status" aria-live="polite"></div>
-            </div>
-        </section>
 
+
+        <section id="panel-config" class="config-panel" role="tabpanel" aria-labelledby="tab-config">
+            <div class="section-heading"><div><h2>Konfiguracja Maliny</h2><p>Najważniejsze ustawienia w kilku przejrzystych grupach. Zmiany zapisują się automatycznie.</p></div></div>
+            <div class="config-toolbar">
+                <input id="config-search" class="config-search" type="search" placeholder="Szukaj ustawienia…" aria-label="Szukaj ustawienia">
+                <button type="button" class="config-action" id="config-reload">Odśwież</button>
+                <button type="button" class="config-action" id="config-expand">Rozwiń wszystko</button>
+                <div class="config-summary" id="config-summary" role="status">Ładowanie konfiguracji…</div>
+            </div>
+            <div id="config-groups"></div>
+        </section>
         <footer class="footer" id="app-footer"></footer>
     </div>
 
+    <script id="malina-i18n-runtime">
+(() => {
+'use strict';
+const API='http://'+window.location.hostname+':8088';
+const fallback='pl';let config=null,dictionaries={},language=fallback;
+const interpolate=(value,params={})=>String(value??'').replace(/\\{(\\w+)\\}/g,(_,key)=>params[key]??'');
+const t=(key,params)=>interpolate((dictionaries[language]&&dictionaries[language][key])??(dictionaries[fallback]&&dictionaries[fallback][key])??key,params);
+async function json(url){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);return response.json();}
+const localeUrl=code=>{const item=config?.languages?.find(entry=>entry.code===code);return API+(item?.file||('/i18n/locales/'+code+'.json'));};
+function put(selector,key,mode='text'){const el=document.querySelector(selector);if(!el)return;const value=t(key);if(mode==='text-node'){const node=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());if(node)node.textContent=' '+value;}else el.textContent=value;}
+function applyStatic(){document.documentElement.lang=language;document.title=t('meta.title');const meta=document.querySelector('meta[name="description"]');if(meta)meta.content=t('meta.description');
+const entries=[['.eyebrow','header.eyebrow'],['h1','header.title'],['.brand .subtitle','header.subtitle'],['.container > section:first-of-type .section-heading h2','current.title'],['.container > section:first-of-type .section-heading p','current.subtitle'],['.chart-section-heading h2','history.title'],['.chart-section-heading p','history.subtitle'],['.range-caption','history.range'],['.display-test-title','display.title'],['.display-test-head .subtitle','display.subtitle'],['.display-test-copy','display.copy'],['.lamp-settings-card .lamp-title','lamp.title'],['.lamp-settings-card .subtitle','lamp.subtitle'],['.lamp-card:not(.lamp-settings-card) .lamp-title','audio.title'],['.lamp-card:not(.lamp-settings-card) .subtitle','audio.subtitle'],['.lamp-card:not(.lamp-settings-card) .lamp-copy','audio.copy'],['.message-studio-title','message.title'],['.message-studio-copy','message.copy'],['label[for="ms-text"]','message.text'],['label[for="ms-duration"]','message.duration'],['label[for="ms-font"]','message.font'],['.ms-mode[data-effect="scroll_left"]','message.left'],['.ms-mode[data-effect="scroll_right"]','message.right'],['.ms-mode[data-effect="static"]','message.static'],['#ms-send','message.send'],['#ms-stop','message.stop'],['.footer','footer']];
+entries.forEach(([s,k])=>{if(s!=='.footer')put(s,k);});const footer=document.querySelector('.footer');if(footer)footer.textContent=t('footer',{version:window.MALINA_VERSION||''});
+['.stat-card.temp .stat-label',' .stat-card.hum .stat-label',' .stat-card.press .stat-label'].forEach((s,i)=>put(s.trim(),['metric.temperature','metric.humidity','metric.pressure'][i]));
+['.stat-card.temp .stat-note','.stat-card.hum .stat-note','.stat-card.press .stat-note'].forEach((s,i)=>put(s,['metric.sensorReading','metric.relativeHumidity','metric.atmosphericPressure'][i]));
+['.chart-name'].forEach(s=>{const els=document.querySelectorAll(s);['metric.temperature','metric.humidity','metric.pressure'].forEach((k,i)=>{const el=els[i];if(el){const node=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());if(node)node.textContent=t(k);}});});
+document.querySelectorAll('.chart-stat-label').forEach((el,i)=>el.textContent=t(['stats.minimum','stats.average','stats.maximum'][i%3]));
+document.querySelectorAll('.range-btn').forEach(el=>el.textContent=t('range.'+el.dataset.range));
+const displayKeys={temp:'display.temp',hum:'display.hum',press:'display.press',weather:'display.weather',night:'display.night'};document.querySelectorAll('#display-test-mode option').forEach(el=>el.textContent=t(displayKeys[el.value]));
+const weatherKeys={letters:'weather.letters',icon:'weather.icon'};document.querySelectorAll('#weather-display-style option').forEach(el=>el.textContent=t(weatherKeys[el.value]));
+document.querySelectorAll('#ms-duration option').forEach(el=>el.textContent=t('duration.'+el.value));
+put('label[for="weather-display-style"]','weather.label');put('label[for="lamp-brightness"]','lamp.brightness');put('label[for="lamp-density"]','lamp.density');
+document.querySelectorAll('.lamp-hint').forEach((el,i)=>el.textContent=t(i===0?'lamp.brightnessHint':'lamp.densityHint'));
+
+const lamp=document.querySelector('#lamp-toggle');if(lamp){const label=t(lamp.classList.contains('active')?'lamp.disable':'lamp.enable');lamp.setAttribute('aria-label',label);lamp.title=label;}
+const langLabel=document.querySelector('.language-switch span');if(langLabel)langLabel.textContent=t('language.label');
+document.querySelectorAll('[data-i18n-aria-label]').forEach(el=>el.setAttribute('aria-label',t(el.dataset.i18nAriaLabel)));
+const sensor=document.querySelector('.sensor-pill');if(sensor){const n=[...sensor.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());if(n)n.textContent=' '+t('header.sensor');}
+const lang=document.getElementById('language-select');if(lang){lang.value=language;lang.setAttribute('aria-label',t('language.label'));}const aria=[['.container > section:first-of-type','current.title'],['.chart-section','history.title'],['.display-test-card','display.title'],['#display-test-mode','display.mode.label'],['#weather-display-style','weather.label'],['.message-studio','message.title'],['#ms-font','message.fontAria']];aria.forEach(([selector,key])=>{const el=document.querySelector(selector);if(el)el.setAttribute('aria-label',t(key));});const stats=['stats.temperature','stats.humidity','stats.pressure'];document.querySelectorAll('.chart-stat-grid').forEach((el,i)=>el.setAttribute('aria-label',t(stats[i]||'history.title')));const input=document.getElementById('ms-text');if(input){input.placeholder=t('message.placeholder');if(['Witaj w domu!','Welcome home!'].includes(input.value))input.value=t('message.sample');}
+}
+function addSelector(available){let sensor=document.querySelector('.sensor-pill');if(!sensor)return;let label=document.querySelector('.language-switch');if(!label){label=document.createElement('label');label.className='language-switch';label.innerHTML='<span></span><select id="language-select" aria-label="Language"></select>';const actions=document.createElement('div');actions.className='header-actions';sensor.parentNode.insertBefore(actions,sensor);actions.append(label,sensor);const style=document.createElement('style');style.textContent='.header-actions{display:flex;align-items:center;gap:9px;flex:0 0 auto}.language-switch{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border);border-radius:999px;background:rgba(17,27,44,.7);color:#bdcce4;font-size:.72rem;font-weight:700}.language-switch select{max-width:100px;padding:3px 5px;border:0;outline:none;background:transparent;color:var(--text);font:inherit;font-weight:750;cursor:pointer}.language-switch option{background:#101a2b;color:#eef4ff}@media(max-width:650px){.page-header{flex-wrap:wrap;align-items:flex-start}.brand{flex:1 1 100%;width:100%}.header-actions{width:100%;justify-content:space-between;gap:8px;padding-left:52px}.language-switch{min-height:36px;padding:6px 8px;font-size:.7rem}.language-switch span{white-space:nowrap}.language-switch select{max-width:88px}}@media(max-width:380px){.header-actions{padding-left:50px;gap:6px}.language-switch{gap:4px;padding:5px 6px;font-size:.66rem}.language-switch select{max-width:72px}.sensor-pill{padding:7px 8px}}';document.head.appendChild(style);}
+const selector=label.querySelector('select');selector.replaceChildren();available.forEach(item=>{const option=document.createElement('option');option.value=item.code;option.textContent=item.nativeName||item.name;selector.appendChild(option);});selector.addEventListener('change',()=>setLanguage(selector.value).catch(console.error));}
+async function setLanguage(next){if(!config||!config.languages.some(item=>item.code===next))return;if(!dictionaries[next])dictionaries[next]=await json(localeUrl(next));language=next;try{localStorage.setItem(config.storageKey||'malina-matrix-language',language);}catch(_){}applyStatic();window.dispatchEvent(new CustomEvent('malina:languagechange',{detail:{language,locale:language==='en'?'en-GB':'pl-PL'}}));}
+async function init(){try{config=await json(API+'/i18n/config.json');const langs=config.languages||[];const codes=langs.map(x=>x.code);const fallbackCode=codes.includes(config.fallbackLanguage)?config.fallbackLanguage:(codes[0]||fallback);let saved=null;try{saved=localStorage.getItem(config.storageKey||'malina-matrix-language');}catch(_){}language=codes.includes(saved)?saved:(codes.includes(config.defaultLanguage)?config.defaultLanguage:fallbackCode);dictionaries[fallbackCode]=await json(localeUrl(fallbackCode));if(language!==fallbackCode)dictionaries[language]=await json(localeUrl(language));addSelector(langs);window.MalinaI18n={t,setLanguage,getLanguage:()=>language,getLocale:()=>language==='en'?'en-GB':'pl-PL'};applyStatic();window.dispatchEvent(new CustomEvent('malina:languagechange',{detail:{language,locale:language==='en'?'en-GB':'pl-PL'}}));}catch(error){console.error('Malina i18n initialization failed:',error);window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,params),getLanguage:()=>fallback,getLocale:()=>'pl-PL'};}}
+window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,params),getLanguage:()=>language,getLocale:()=>'pl-PL',setLanguage};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+
+
+
+</script>
     <script>
+        // Panel: oddziel widok pomiarów od narzędzi diagnostycznych.
+        (() => {
+            const tabs = [...document.querySelectorAll('.dashboard-tab')];
+            const settings = document.querySelector('.lamp-settings-card');
+            const messageStudio = document.querySelector('.message-studio');
+            if (settings && messageStudio) messageStudio.after(settings);
+
+            function activateTab(name) {
+                const tests = name === 'tests';
+                document.body.dataset.dashboardTab = name === 'config' ? 'config' : (tests ? 'tests' : 'live');
+                tabs.forEach(tab => {
+                    const active = tab.dataset.tab === name;
+                    tab.classList.toggle('active', active);
+                    tab.setAttribute('aria-selected', String(active));
+                    tab.tabIndex = active ? 0 : -1;
+                });
+            }
+            tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.tab)));
+            activateTab('live');
+        })();
+
         // ==========================================
         // KONFIGURACJA
         const WERSJA_STRONY = "v1.5.0";
@@ -441,9 +615,68 @@
                 });
             });
         }, { passive: true });
-        let allData = [];              // pełne dane z data.json
-        let currentRange = '30d';      // domyślnie ostatnie 30 dni
-        let userScrolledAway = false;  // czy użytkownik ręcznie przewinął wykres
+        let allData = [];              // pełny wybrany zakres zwrócony przez API
+        let currentRange = '30d';
+        let userScrolledAway = false;
+        let chartsVisible = false;
+        let chartRenderQueued = false;
+        let pendingChartData = null;
+        let historyAbortController = null;
+        let historyRequestRange = null;
+        let historyDataRange = null;
+        let historyHasLoaded = false;
+        let latestKnownTimestamp = null;
+        let latestRefreshInFlight = false;
+        const MAX_CHART_POINTS = 420;
+
+        // Zachowaj kształt wykresu, ale ogranicz liczbę punktów renderowanych na telefonie.
+        function reduceChartPoints(rows, limit = MAX_CHART_POINTS) {
+            if (!Array.isArray(rows) || rows.length <= limit) return rows || [];
+            const bucketSize = (rows.length - 2) / (limit / 2);
+            const result = [rows[0]];
+            for (let i = 0; i < limit / 2; i++) {
+                const start = 1 + Math.floor(i * bucketSize);
+                const end = Math.min(rows.length - 1, 1 + Math.floor((i + 1) * bucketSize));
+                let minRow = rows[start], maxRow = rows[start];
+                for (let j = start + 1; j < end; j++) {
+                    if (rows[j].value < minRow.value) minRow = rows[j];
+                    if (rows[j].value > maxRow.value) maxRow = rows[j];
+                }
+                if (minRow === maxRow) result.push(minRow);
+                else if (minRow.timestamp < maxRow.timestamp) result.push(minRow, maxRow);
+                else result.push(maxRow, minRow);
+            }
+            result.push(rows[rows.length - 1]);
+            return result;
+        }
+
+        function renderPendingCharts() {
+            if (!pendingChartData || !chartsVisible || chartRenderQueued) return;
+            chartRenderQueued = true;
+            requestAnimationFrame(() => {
+                chartRenderQueued = false;
+                if (!pendingChartData || !chartsVisible) return;
+                const { temps, hums, press } = pendingChartData;
+                tempChartInst = createOrUpdateChart('tempChart','scroll-temp','container-temp',tempChartInst,window.MalinaI18n?.t('chart.label.temperature') || 'Temperatura',reduceChartPoints(temps),'#e74c3c','°C');
+                humChartInst = createOrUpdateChart('humChart','scroll-hum','container-hum',humChartInst,window.MalinaI18n?.t('chart.label.humidity') || 'Wilgotność',reduceChartPoints(hums),'#3498db','%');
+                pressChartInst = createOrUpdateChart('pressChart','scroll-press','container-press',pressChartInst,window.MalinaI18n?.t('chart.label.pressure') || 'Ciśnienie',reduceChartPoints(press),'#2ecc71','hPa');
+            });
+        }
+
+        if ('IntersectionObserver' in window) {
+            const chartObserver = new IntersectionObserver(entries => {
+                chartsVisible = entries.some(entry => entry.isIntersecting);
+                if (chartsVisible) renderPendingCharts();
+            }, { rootMargin: '250px 0px', threshold: 0.01 });
+            const chartSection = document.querySelector('.chart-section');
+            if (chartSection) chartObserver.observe(chartSection);
+        } else {
+            chartsVisible = false;
+            window.addEventListener('load', () => {
+                const section = document.querySelector('.chart-section');
+                if (section && section.getBoundingClientRect().top < window.innerHeight + 250) { chartsVisible = true; renderPendingCharts(); }
+            }, { once: true });
+        }
 
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -621,7 +854,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     resizeDelay: 100,
-                    animation: { duration: 300 },
+                    animation: false,
                     events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
                     interaction: {
                         mode: 'index',
@@ -771,7 +1004,9 @@
                 densityValue.textContent = state.density + '%';
                 button.classList.toggle('active', enabled);
                 button.setAttribute('aria-pressed', String(enabled));
-                button.textContent = enabled ? window.MalinaI18n?.t('lamp.disable') || 'Wyłącz lampkę' : window.MalinaI18n?.t('lamp.enable') || 'Włącz lampkę';
+                const label = enabled ? window.MalinaI18n?.t('lamp.disable') || 'Wyłącz lampkę' : window.MalinaI18n?.t('lamp.enable') || 'Włącz lampkę';
+                button.setAttribute('aria-label', label);
+                button.title = label;
                 status.classList.toggle('active', enabled);
                 status.textContent = enabled
                     ? window.MalinaI18n?.t('lamp.on') || 'Lampka jest włączona.'
@@ -853,50 +1088,165 @@
             setWeatherStyle('letters', true);
         })();
 
-        // --- WCZYTANIE I RENDER ---
-        function loadData() {
-            fetch('/data.json')
-                .then(res => res.json())
-                .then(data => {
-                    if (!Array.isArray(data) || data.length === 0) return;
-                    allData = data;
+        // Test opadów: wyłącznie rodzaj i procent, bez konfiguracji geometrii matrycy.
+        (() => {
+            const api = 'http://' + window.location.hostname + ':8088/weather-preview';
+            const kind = document.getElementById('weather-preview-kind');
+            const percent = document.getElementById('weather-preview-percent');
+            const toggle = document.getElementById('weather-preview-toggle');
+            const status = document.getElementById('weather-preview-status');
+            let enabled = false;
+            function updateInput() {
+                const live = kind.value === 'live';
+                percent.disabled = live || kind.value === 'none';
+                if (kind.value === 'none') percent.value = '0';
+                else if (kind.value === 'rain' && (!percent.value || Number(percent.value) === 0)) percent.value = '70';
+                else if (kind.value === 'snow' && (!percent.value || Number(percent.value) === 0)) percent.value = '65';
+            }
+            async function send() {
+                const value = Math.max(0, Math.min(100, Math.round(Number(percent.value) || 0)));
+                percent.value = String(value);
+                const response = await fetch(api, {method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({enabled, kind:kind.value, probability:value})});
+                if (!response.ok) throw new Error('HTTP '+response.status);
+                const data = await response.json();
+                enabled = !!data.preview.enabled;
+                toggle.classList.toggle('active', enabled);
+                toggle.setAttribute('aria-pressed', String(enabled));
+                toggle.textContent = enabled ? 'Wyłącz test' : 'Włącz test';
+                status.textContent = enabled ? 'Test opadów aktywny na matrycy.' : 'Test wyłączony — wyświetlane są dane pogodowe.';
+            }
+            async function load() {
+                try {
+                    const response = await fetch(api, {cache:'no-store'});
+                    if (!response.ok) throw new Error('HTTP '+response.status);
+                    const data = await response.json();
+                    enabled = !!data.preview.enabled;
+                    kind.value = data.preview.kind || (data.preview.scenario === 'none' ? 'none' : 'live');
+                    percent.value = data.preview.probability ?? 70;
+                    updateInput();
+                    toggle.classList.toggle('active', enabled);
+                    toggle.setAttribute('aria-pressed', String(enabled));
+                    toggle.textContent = enabled ? 'Wyłącz test' : 'Włącz test';
+                    status.textContent = enabled ? 'Test opadów aktywny na matrycy.' : 'Test wyłączony — wyświetlane są dane pogodowe.';
+                } catch (error) { status.textContent = 'Brak połączenia z modułem pogody: '+error.message; }
+            }
+            kind.addEventListener('change', updateInput);
+            toggle.addEventListener('click', () => { enabled = !enabled; send().catch(e => { enabled = !enabled; status.textContent = 'Błąd testu: '+e.message; }); });
+            load();
+        })();
 
-                    const filtered = applyRangeFilter(data);
-                    if (filtered.length === 0) return;
+        // --- HISTORIA Z ISTNIEJĄCEGO API ZEGARA ---
+        const historyApiRoot = () => 'http://' + window.location.hostname + ':8088';
 
-                    const latest = filtered[filtered.length - 1];
+        function updateCurrentReadings(latest) {
+            const fields = [
+                ['curr-temp', latest?.temperature, 1, ' °C'],
+                ['curr-hum', latest?.humidity, 0, ' %'],
+                ['curr-press', latest?.pressure, 0, ' hPa']
+            ];
+            fields.forEach(([id, value, digits, unit]) => {
+                const node = document.getElementById(id);
+                if (!node) return;
+                node.innerText = value === null || value === undefined || !Number.isFinite(Number(value))
+                    ? '--'
+                    : Number(value).toFixed(digits) + unit;
+            });
+        }
 
-                    document.getElementById('curr-temp').innerText = latest.temperature.toFixed(1) + ' °C';
-                    document.getElementById('curr-hum').innerText = latest.humidity.toFixed(0) + ' %';
-                    document.getElementById('curr-press').innerText = latest.pressure.toFixed(0) + ' hPa';
+        async function loadData(force = false) {
+            const requestedRange = currentRange;
+            if (!force && historyAbortController && historyRequestRange === requestedRange) return;
+            if (!force && historyHasLoaded && historyDataRange === requestedRange) {
+                updateMetricStats('temp', allData, 'temperature', 1, '°C');
+                updateMetricStats('hum', allData, 'humidity', 0, '%');
+                updateMetricStats('press', allData, 'pressure', 0, 'hPa');
+                pendingChartData = {
+                    temps: allData.map(r => ({timestamp: r.timestamp, value: r.temperature})),
+                    hums: allData.map(r => ({timestamp: r.timestamp, value: r.humidity})),
+                    press: allData.map(r => ({timestamp: r.timestamp, value: r.pressure}))
+                };
+                renderPendingCharts();
+                return;
+            }
 
-                    // Statystyki wyliczane z rzeczywistych pomiarów wybranego okresu.
-                    updateMetricStats('temp', filtered, 'temperature', 1, '°C');
-                    updateMetricStats('hum', filtered, 'humidity', 0, '%');
-                    updateMetricStats('press', filtered, 'pressure', 0, 'hPa');
+            if (historyAbortController) historyAbortController.abort();
+            const controller = new AbortController();
+            historyAbortController = controller;
+            historyRequestRange = requestedRange;
 
-                    const temps = filtered.map(r => ({timestamp: r.timestamp, value: r.temperature}));
-                    const hums  = filtered.map(r => ({timestamp: r.timestamp, value: r.humidity}));
-                    const press = filtered.map(r => ({timestamp: r.timestamp, value: r.pressure}));
+            try {
+                const response = await fetch(
+                    historyApiRoot() + '/history?range=' + encodeURIComponent(requestedRange),
+                    {cache: 'no-store', signal: controller.signal}
+                );
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const payload = await response.json();
+                if (controller.signal.aborted || requestedRange !== currentRange) return;
 
-                    tempChartInst  = createOrUpdateChart('tempChart',  'scroll-temp',  'container-temp',  tempChartInst,  window.MalinaI18n?.t('chart.label.temperature') || 'Temperatura', temps,  '#e74c3c', '°C');
-                    humChartInst   = createOrUpdateChart('humChart',   'scroll-hum',   'container-hum',   humChartInst,   window.MalinaI18n?.t('chart.label.humidity') || 'Wilgotność',  hums,   '#3498db', '%');
-                    pressChartInst = createOrUpdateChart('pressChart', 'scroll-press', 'container-press', pressChartInst, window.MalinaI18n?.t('chart.label.pressure') || 'Ciśnienie',   press,  '#2ecc71', 'hPa');
+                const rows = Array.isArray(payload.data) ? payload.data : [];
+                allData = rows;
+                historyDataRange = requestedRange;
+                historyHasLoaded = true;
+                if (payload.latest && payload.latest.timestamp) {
+                    latestKnownTimestamp = payload.latest.timestamp;
+                }
+                updateCurrentReadings(payload.latest || rows[rows.length - 1] || null);
 
-                    // Auto-przewiń na koniec tylko jeśli użytkownik nie przegląda ręcznie historii
-                    if (!userScrolledAway) {
-                        requestAnimationFrame(() => {
-                            ['scroll-temp', 'scroll-hum', 'scroll-press'].forEach(id => {
-                                const el = document.getElementById(id);
-                                if (el) {
-                                    el.scrollLeft = el.scrollWidth;
-                                    updateScrollFade(el);
-                                }
-                            });
+                // Statystyki są dokładne dla całego zakresu; redukcja dotyczy wyłącznie rysowania.
+                updateMetricStats('temp', rows, 'temperature', 1, '°C');
+                updateMetricStats('hum', rows, 'humidity', 0, '%');
+                updateMetricStats('press', rows, 'pressure', 0, 'hPa');
+
+                pendingChartData = {
+                    temps: rows.map(r => ({timestamp: r.timestamp, value: r.temperature})),
+                    hums: rows.map(r => ({timestamp: r.timestamp, value: r.humidity})),
+                    press: rows.map(r => ({timestamp: r.timestamp, value: r.pressure}))
+                };
+                renderPendingCharts();
+
+                if (!userScrolledAway) {
+                    requestAnimationFrame(() => {
+                        ['scroll-temp', 'scroll-hum', 'scroll-press'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) {
+                                el.scrollLeft = el.scrollWidth;
+                                updateScrollFade(el);
+                            }
                         });
-                    }
-                })
-                .catch(err => console.error("Błąd pobierania danych z czujnika:", err));
+                    });
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Błąd pobierania historii pomiarów:', error);
+                }
+            } finally {
+                if (historyAbortController === controller) {
+                    historyAbortController = null;
+                    historyRequestRange = null;
+                }
+            }
+        }
+
+        // Mały odczyt co 10 s; pełny zakres pobierany jest tylko po nowym pomiarze.
+        async function refreshHistoryLatest() {
+            if (document.hidden || latestRefreshInFlight) return;
+            latestRefreshInFlight = true;
+            try {
+                const response = await fetch(historyApiRoot() + '/history/latest', {cache: 'no-store'});
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const payload = await response.json();
+                const latest = payload.latest;
+                if (!latest || !latest.timestamp || latest.timestamp === latestKnownTimestamp) return;
+
+                updateCurrentReadings(latest);
+                // Zaktualizuj znacznik dopiero po udanym odczycie wybranego zakresu, aby błąd można było ponowić.
+                await loadData(true);
+            } catch (error) {
+                console.error('Błąd odczytu najnowszego pomiaru:', error);
+            } finally {
+                latestRefreshInFlight = false;
+            }
         }
 
         // --- INICJALIZACJA ---
@@ -905,6 +1255,7 @@
             const rangeButtons = document.querySelectorAll('.range-btn');
             rangeButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (btn.dataset.range === currentRange) return;
                     rangeButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     currentRange = btn.dataset.range;
@@ -913,6 +1264,7 @@
                     if (tempChartInst) { tempChartInst.destroy(); tempChartInst = null; }
                     if (humChartInst)  { humChartInst.destroy();  humChartInst = null; }
                     if (pressChartInst){ pressChartInst.destroy(); pressChartInst = null; }
+                    pendingChartData = null;
                     loadData();
                 });
             });
@@ -920,68 +1272,7 @@
             // Synchronizacja scrolla między wykresami
             setupScrollSync();
 
-            // Panel wysyłania tekstu na wyświetlacz
-            const msgToggle = document.getElementById('msg-toggle');
-            const msgPanel = document.getElementById('msg-panel');
-            const msgInput = document.getElementById('msg-input');
-            const msgSend = document.getElementById('msg-send');
-            const msgStatus = document.getElementById('msg-status');
-
-            const toggleMessagePanel = () => {
-                const open = msgPanel.classList.toggle('visible');
-                msgToggle.classList.toggle('open', open);
-                msgToggle.setAttribute('aria-expanded', String(open));
-            };
-            msgToggle.setAttribute('role', 'button');
-            msgToggle.setAttribute('tabindex', '0');
-            msgToggle.setAttribute('aria-expanded', 'false');
-            msgToggle.addEventListener('click', toggleMessagePanel);
-            msgToggle.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleMessagePanel();
-                }
-            });
-
-            // Wyślij po Enter
-            msgInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') msgSend.click();
-            });
-
-            msgSend.addEventListener('click', () => {
-                const text = msgInput.value.trim();
-                if (!text) return;
-
-                msgSend.disabled = true;
-                msgStatus.textContent = 'Wysyłanie...';
-                msgStatus.className = 'msg-status';
-
-                fetch('http://' + window.location.hostname + ':8088/send', {
-                    method: 'POST',
-                    body: text,
-                })
-                .then(res => {
-                    if (res.ok) {
-                        msgStatus.textContent = '✓ Wysłano!';
-                        msgStatus.className = 'msg-status ok';
-                        msgInput.value = '';
-                    } else {
-                        throw new Error('HTTP ' + res.status);
-                    }
-                })
-                .catch(err => {
-                    msgStatus.textContent = '✗ Błąd: ' + err.message;
-                    msgStatus.className = 'msg-status err';
-                })
-                .finally(() => {
-                    msgSend.disabled = false;
-                    setTimeout(() => {
-                        if (msgStatus.textContent.startsWith('✓')) {
-                            msgStatus.textContent = '';
-                        }
-                    }, 3000);
-                });
-            });
+            // Sterowanie komunikatami obsługuje zintegrowane Studio napisów LED.
         }
 
         async function refreshAudioStatus() {
@@ -995,11 +1286,260 @@
             } catch (error) { status.textContent = window.MalinaI18n?.t('audio.error') || 'Nie można odczytać stanu Bluetooth.'; }
         }
         window.addEventListener('malina:languagechange', () => { loadData(); refreshAudioStatus(); });
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) refreshHistoryLatest();
+        });
         refreshAudioStatus();
         setInterval(refreshAudioStatus, 2500);
         init();
         loadData();
-        setInterval(loadData, 10000);
+        setInterval(refreshHistoryLatest, 10000);
     </script>
+
+<script id="message-studio-inline-js">
+(() => {
+'use strict';
+const apiRoot=()=>'http://'+location.hostname+':8088';
+document.addEventListener('DOMContentLoaded',()=>{
+ const el=id=>document.getElementById(id);
+ const studio=el('message-studio');
+ if(!studio)return;
+ const txt=el('ms-text'),duration=el('ms-duration'),font=el('ms-font'),sendButton=el('ms-send'),stopButton=el('ms-stop');
+ let selectedEffect='scroll_left',selectedFont='zegar_app/assets/fonts/8-series/MatrixChunky8X.bdf',busy=false;
+ const tr=(key,params)=>window.MalinaI18n?.t(key,params)||key;
+ let statusKey='message.connecting',statusParams={},statusType='';
+ function status(key,params={},type=''){
+   statusKey=key;statusParams=params&&typeof params==='object'?params:{};statusType=typeof params==='string'?params:type;
+   const node=el('ms-status');
+   node.textContent=tr(key,statusParams);
+   node.className='ms-status'+(statusType?' '+statusType:'');
+ }
+ function updateCount(){el('ms-count').textContent=tr('message.count',{count:txt.value.length});}
+ window.addEventListener('malina:languagechange',()=>{updateCount();status(statusKey,statusParams,statusType);});
+ async function call(path,options){
+   const response=await fetch(apiRoot()+path,Object.assign({cache:'no-store'},options||{}));
+   if(!response.ok){
+     let message='Błąd połączenia: HTTP '+response.status;
+     try{message=(await response.json()).error||message;}catch(_){}
+     throw new Error(message);
+   }
+   return response.json();
+ }
+ function setBusy(value){
+   busy=value;
+   sendButton.disabled=value;
+   stopButton.disabled=value;
+ }
+ studio.querySelectorAll('[data-effect]').forEach(button=>{
+   button.addEventListener('click',()=>{
+     selectedEffect=button.dataset.effect;
+     studio.querySelectorAll('[data-effect]').forEach(item=>{
+       item.setAttribute('aria-pressed',String(item===button));
+     });
+   });
+ });
+ txt.addEventListener('input',updateCount);
+ sendButton.addEventListener('click',async()=>{
+   if(busy)return;
+   const text=txt.value.trim();
+   if(!text){status('message.empty',{},'err');txt.focus();return;}
+   setBusy(true);
+   status('message.sending');
+   try{
+     const seconds=Number(duration.value);
+     await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({text,effect:selectedEffect,speed:35,duration:seconds,font:font.value})});
+     status('message.sent',{},'ok');
+   }catch(error){status('message.sendError',{error:error.message},'err');}
+   finally{setBusy(false);}
+ });
+ stopButton.addEventListener('click',async()=>{
+   if(busy)return;
+   setBusy(true);
+   status('message.stopping');
+   try{
+     await call('/message',{method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({stop:true})});
+     status('message.stopped',{},'ok');
+   }catch(error){status('message.stopError',{error:error.message},'err');}
+   finally{setBusy(false);}
+ });
+ updateCount();
+ call('/message-options').then(options=>{
+   const fonts=Array.isArray(options.fonts)?options.fonts:[];
+   font.replaceChildren();
+   fonts.forEach(item=>{
+     const option=document.createElement('option');
+     option.value=item.id;
+     option.textContent=item.label.replace(/\.bdf$/i,'');
+     font.appendChild(option);
+   });
+   const preferred=fonts.find(item=>item.id.endsWith('/MatrixChunky8X.bdf'));
+   selectedFont=preferred?preferred.id:(fonts[0]?fonts[0].id:'CONFIGURED');
+   font.value=selectedFont;
+   font.addEventListener('change',()=>{selectedFont=font.value;});
+   status('message.connected',{},'ok');
+ }) .catch(error=>status('message.noConnection',{error:error.message},'err'));
+});
+})();
+</script>
+
+<script id="malina-config-editor">
+(() => {
+'use strict';
+const api='http://'+location.hostname+':8088/config';
+const root=document.getElementById('config-groups'),summary=document.getElementById('config-summary');
+const search=document.getElementById('config-search'),reload=document.getElementById('config-reload'),expand=document.getElementById('config-expand');
+let config=null,selected='weather_icon',layoutFields={},groupData=[];
+const positionItems=[
+ {id:'weather_icon',label:'Ikona pogody',x:'weather_icon_x',y:'weather_icon_y',w:8,h:8},
+ {id:'temperature',label:'Temperatura',x:'temperature_x',y:'temperature_y',w:13,h:5},
+ {id:'precipitation_icon',label:'Ikona opadów',x:'precipitation_icon_x',y:'precipitation_icon_y',w:8,h:6},
+ {id:'precipitation_bar',label:'Pasek opadów',x:'precipitation_bar_x',y:'precipitation_bar_y',w:10,h:8},
+ {id:'graph',label:'Wykresy',x:'graph_x',y:'graph_y',w:18,h:7,baseline:true},
+ {id:'info_value',label:'Wartość pomiaru',x:'info_value_x',y:'info_value_y',w:12,h:5},
+ {id:'wifi',label:'Wskaźnik Wi-Fi',x:'wifi_x',y:'wifi_y',w:1,h:1}
+];
+const labels={sensors:'Czujniki',history:'Historia',graph:'Wykres',weather:'Pogoda',wifi_indicator:'Wskaźnik Wi-Fi',web_control:'Panel WWW',messages:'Wiadomości',lamp:'Lampka',audio_visualizer:'Wizualizator audio',flip_clock:'Animacja zegara',info_transitions:'Przejścia informacji',panel_count:'Liczba modułów matrycy',block_orientation:'Orientacja bloków',rotation:'Obrót',reverse_order:'Odwrotna kolejność',i2c_address:'Adres I²C',i2c_port:'Port I²C',format_24h:'Format 24-godzinny',show_seconds:'Pokazuj sekundy',day:'Font dzienny',sensor:'Font pomiarów',night:'Font nocny',message:'Font wiadomości',fallback:'Font awaryjny',sensor_fallback:'Awaryjny font pomiarów',screen_order:'Kolejność ekranów',screen_dwell_seconds:'Czas jednego ekranu (s)',normal_refresh_seconds:'Odświeżanie normalne (s)',message_refresh_seconds:'Odświeżanie wiadomości (s)',animation_refresh_seconds:'Odświeżanie animacji (s)',night_mode_enabled:'Automatyczny tryb nocny',night_start_hour:'Początek nocy (godzina)',night_end_hour:'Koniec nocy (godzina)',day_contrast:'Jasność dzienna (0–255)',night_contrast:'Jasność nocna (0–255)',lamp_default_brightness:'Domyślna jasność lampki (%)',lamp_default_density:'Domyślna gęstość lampki (%)',refresh_seconds:'Częstotliwość odczytu (s)',enabled:'Aktywne sterowniki',address:'Adres I²C',port:'Port / I²C',device_id:'Identyfikator urządzenia',pin:'Pin GPIO',database_path:'Plik bazy danych',web_directory:'Katalog WWW',log_interval_seconds:'Zapis historii co (s)',graph_hours:'Zakres wykresu (h)',export_on_start:'Eksportuj przy starcie',latitude:'Szerokość geograficzna',longitude:'Długość geograficzna',cache_seconds:'Cache prognozy (s)',retry_seconds:'Ponowienie po błędzie (s)',request_timeout_seconds:'Timeout API (s)',display_style:'Wygląd ikony pogody',probe_host:'Host testowy',probe_port:'Port testowy',probe_timeout_seconds:'Timeout testu (s)',probe_interval_seconds:'Interwał testu (s)',host:'Adres nasłuchu',message_duration_seconds:'Czas wiadomości (s)',plugins:'Wtyczki ekranów',plugin_refresh_seconds:'Odświeżanie wtyczek (s)',plugin_stale_seconds:'Ważność danych wtyczek (s)',modules:'Moduły rozszerzeń',flip_seconds:'Czas animacji flip (s)',flip_frame_seconds:'Klatka flip (s)',info_transition_seconds:'Czas przejścia (s)',info_blank_seconds:'Przerwa przejścia (s)',info_frame_seconds:'Klatka przejścia (s)',images_dir:'Katalog obrazów'};
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function request(options){const r=await fetch(api,{cache:'no-store',...options});const d=await r.json();if(!r.ok)throw new Error(d.error||'HTTP '+r.status);return d;}
+function getField(key){return layoutFields[key];}
+function positionEditor(){
+ return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu.</div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
+}
+function control(f){
+ if(f.kind==='boolean')return '<select class="config-input"><option value="true">Włączone</option><option value="false">Wyłączone</option></select>';
+ if(f.choices)return '<select class="config-input">'+f.choices.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select>';
+ return '<input class="config-input" type="'+(['integer','number'].includes(f.kind)?'number':'text')+'" '+(f.kind==='number'?'step="any"':'')+' value="'+esc(f.value)+'">';
+}
+function rowMarkup(f){
+ const label=f.label||labels[f.key]||f.key.replace(/_/g,' ');
+ return '<div class="config-field" data-search="'+esc((f.section+' '+f.key+' '+label).toLowerCase())+'"><div class="config-field-info"><span class="config-field-name">'+esc(label)+'</span><div class="config-field-meta">'+esc(f.section+'.'+f.key)+' · <span class="config-tag '+(f.live?'':'restart')+'">'+(f.live?'na żywo':'wymaga restartu')+'</span></div></div><div><div class="config-control-wrap">'+control(f)+'</div><div class="config-save-state" aria-live="polite"></div></div></div>';
+}
+async function saveField(f,value,state,input){
+ state.className='config-save-state';state.textContent='Zapisywanie…';
+ try{const result=await request({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({section:f.section,key:f.key,value})});
+  f.value=result.value;if(input)input.value=result.value;
+  state.className='config-save-state ok';state.textContent=result.live?'Zapisano · działa na żywo':'Zapisano · wymagany restart';
+  summary.textContent='Zapisano zmiany w '+config.path;
+  return true;
+ }catch(e){state.className='config-save-state err';state.textContent='Błąd: '+e.message;return false;}
+}
+function drawPositionMap(){
+ const canvas=document.getElementById('position-canvas');if(!canvas)return;
+ const ctx=canvas.getContext('2d'),cw=canvas.width,ch=canvas.height;
+ const led=8,gap=2,seam=6,top=25,left=6,rowPitch=led+gap;
+ const modulePitch=8*rowPitch-gap+seam;
+ const px=x=>left+Math.floor(x/8)*modulePitch+(x%8)*rowPitch;
+ const py=y=>top+y*rowPitch;
+ ctx.clearRect(0,0,cw,ch);ctx.fillStyle='#050a12';ctx.fillRect(0,0,cw,ch);
+ // Oznaczenia ośmiu fizycznych modułów.
+ ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+ for(let m=0;m<8;m++){
+  const start=left+m*modulePitch,center=start+(8*rowPitch- gap)/2;
+  ctx.fillStyle='#8da2c3';ctx.fillText(String(m+1),center,10);
+  ctx.strokeStyle='rgba(125,151,190,.22)';ctx.lineWidth=1;
+  ctx.strokeRect(start-2,top-3,8*rowPitch-gap+4,8*rowPitch-gap+6);
+ }
+ // Ciemne pola LED i delikatne punkty — dokładnie 64 kolumny × 8 wierszy.
+ for(let y=0;y<8;y++)for(let x=0;x<64;x++){
+  const xx=px(x),yy=py(y);
+  ctx.fillStyle='#182438';ctx.fillRect(xx,yy,led,led);
+  ctx.fillStyle='rgba(123,151,190,.13)';ctx.fillRect(xx+2,yy+2,4,4);
+ }
+ // Granice elementów: nie zasłaniamy siatki jednolitymi prostokątami.
+ positionItems.forEach(item=>{
+  const fx=getField(item.x),fy=getField(item.y);if(!fx||!fy)return;
+  const x=Number(fx.value),y=Number(fy.value);
+  const topY=item.baseline?y-item.h+1:y;
+  const x1=px(x)-2,x2=px(Math.min(63,x+item.w-1))+led+2;
+  const y1=py(Math.max(0,topY))-2,y2=py(Math.min(7,topY+item.h-1))+led+2;
+  const active=item.id===selected;
+  ctx.fillStyle=active?'rgba(91,151,255,.12)':'rgba(103,207,184,.045)';
+  ctx.fillRect(x1,y1,x2-x1,y2-y1);
+  ctx.strokeStyle=active?'#a9c5ff':'rgba(103,207,184,.72)';ctx.lineWidth=active?2:1;
+  ctx.setLineDash(active?[]:[3,3]);ctx.strokeRect(x1+.5,y1+.5,x2-x1-1,y2-y1-1);ctx.setLineDash([]);
+ });
+ const item=positionItems.find(i=>i.id===selected),fx=getField(item.x),fy=getField(item.y);
+ document.getElementById('position-x').value=fx.value;document.getElementById('position-y').value=fy.value;
+}
+async function setPosition(item,x,y){
+ const fx=getField(item.x),fy=getField(item.y),status=document.getElementById('position-status');
+ const maxX=item.id==='precipitation_icon'?54:Math.max(0,64-item.w),minY=item.baseline?6:0,maxY=item.baseline?7:Math.max(0,8-item.h);
+ x=Math.max(0,Math.min(maxX,Math.round(Number(x)||0)));
+ y=Math.max(minY,Math.min(maxY,Math.round(Number(y)||0)));
+ const oldX=fx.value,oldY=fy.value;fx.value=String(x);fy.value=String(y);drawPositionMap();
+ const a=await saveField(fx,String(x),status,document.getElementById('position-x'));
+ if(!a){fx.value=oldX;fy.value=oldY;drawPositionMap();return;}
+ const b=await saveField(fy,String(y),status,document.getElementById('position-y'));
+ if(!b){fy.value=oldY;drawPositionMap();return;}
+ drawPositionMap();
+}
+function bindPositionEditor(){
+ const select=document.getElementById('position-select'),canvas=document.getElementById('position-canvas');
+ if(!select||!canvas)return;
+ select.value=selected;select.addEventListener('change',()=>{selected=select.value;drawPositionMap();});
+ const item=()=>positionItems.find(i=>i.id===selected);
+ ['x','y'].forEach(axis=>document.getElementById('position-'+axis).addEventListener('change',e=>{
+  const it=item(),f=getField(it[axis]);const x=axis==='x'?Number(e.target.value):Number(getField(it.x).value),y=axis==='y'?Number(e.target.value):Number(getField(it.y).value);
+  setPosition(it,x,y);
+ }));
+ canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect(),scaleX=canvas.width/rect.width,scaleY=canvas.height/rect.height;
+  const cx=(e.clientX-rect.left)*scaleX,cy=(e.clientY-rect.top)*scaleY;
+  const led=8,gap=2,seam=6,top=25,left=6,rowPitch=10,modulePitch=84;
+  let bestX=0,bestDist=Infinity;
+  for(let x=0;x<64;x++){const center=left+Math.floor(x/8)*modulePitch+(x%8)*rowPitch+led/2;const d=Math.abs(cx-center);if(d<bestDist){bestDist=d;bestX=x;}}
+  const y=Math.max(0,Math.min(7,Math.round((cy-top-led/2)/rowPitch)));
+  setPosition(item(),bestX,y);
+ });
+ drawPositionMap();
+}
+function renderGroup(group,details,query=''){
+ const body=details.querySelector('.config-fields');if(details.dataset.rendered==='1'&&!query)return;
+ const fields=group.fields.filter(f=>group.id==='layout'?(f.key.startsWith('clock_offset_')):true).filter(f=>!query||(f.section+' '+f.key+' '+(f.label||'')).toLowerCase().includes(query));
+ let html=group.id==='layout'?positionEditor():'';
+ html+=fields.map(rowMarkup).join('');
+ body.innerHTML=html;details.dataset.rendered='1';
+ group.fields.filter(f=>group.id==='layout'?f.key.startsWith('clock_offset_'):true).forEach(f=>{
+  const rows=[...body.querySelectorAll('.config-field')],row=rows.find(r=>r.dataset.search.includes((f.section+' '+f.key+' '+(f.label||'')).toLowerCase()));
+  if(!row)return;const input=row.querySelector('.config-input'),state=row.querySelector('.config-save-state');input.value=f.value==='yes'?'true':f.value==='no'?'false':f.value;
+  input.addEventListener('change',()=>saveField(f,input.value,state,input));
+  if(input.type==='text')input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveField(f,input.value,state,input);}});
+ });
+ if(group.id==='layout')bindPositionEditor();
+}
+function applySearch(){
+ const q=search.value.trim().toLowerCase();
+ groupData.forEach(({group,details})=>{
+  const matches=group.fields.filter(f=>(group.label+' '+f.section+' '+f.key+' '+(f.label||'')).toLowerCase().includes(q));
+  details.hidden=!!q&&group.id!=='layout'&&matches.length===0;
+  if(q&&matches.length){details.open=true;renderGroup(group,details,q);}
+  else if(!q&&details.dataset.rendered!=='1'&&details.open)renderGroup(group,details);
+ });
+}
+function render(){
+ root.replaceChildren();groupData=[];layoutFields={};
+ const layoutGroup=config.groups.find(g=>g.id==='layout');if(layoutGroup)layoutGroup.fields.forEach(f=>layoutFields[f.key]=f);
+ config.groups.forEach((group,index)=>{
+  const d=document.createElement('details');d.className='config-group';d.open=index===0;
+  d.innerHTML='<summary><span>'+esc(group.label)+'</span><span class="config-count">'+group.fields.length+' opcji</span></summary><div class="config-fields"></div>';
+  d.addEventListener('toggle',()=>{if(d.open&&d.dataset.rendered!=='1')renderGroup(group,d);});
+  root.appendChild(d);groupData.push({group,details:d});
+  if(d.open)renderGroup(group,d);
+ });
+ const count=config.groups.reduce((n,g)=>n+g.fields.length,0);
+ summary.textContent=count+' ustawień · 5 grup · '+config.path;
+ applySearch();
+}
+async function load(){summary.textContent='Wczytuję konfigurację…';reload.disabled=true;try{config=await request();render();}catch(e){summary.textContent='Nie udało się wczytać: '+e.message;}finally{reload.disabled=false;}}
+search.addEventListener('input',applySearch);reload.addEventListener('click',load);
+expand.addEventListener('click',()=>{const all=[...root.querySelectorAll('.config-group')],open=all.some(x=>!x.open);all.forEach(x=>{x.open=open;if(open&&x.dataset.rendered!=='1'){const g=groupData.find(a=>a.details===x).group;renderGroup(g,x);}});expand.textContent=open?'Zwiń wszystko':'Rozwiń wszystko';});
+load();
+})();
+</script>
+
 </body>
 </html>
+
+[executed on device: malina (5f975671-b674-4ac4-965e-55c199641524)]
