@@ -235,5 +235,17 @@
   "config.field.network.probe_interval_seconds": "Connectivity check interval (s)",
   "config.field.web.host": "Web server bind address",
   "config.field.web.port": "Web server port",
-  "config.field.web.message_duration_seconds": "Default message duration (s)"
+  "config.field.web.message_duration_seconds": "Default message duration (s)",
+  "ui.position.clock": "Daytime clock",
+  "ui.position.weather": "Weather icon",
+  "ui.position.temperature": "Temperature",
+  "ui.position.precipitationIcon": "Precipitation icon",
+  "ui.position.precipitationBar": "Precipitation bar",
+  "ui.position.graph": "Graphs",
+  "ui.position.infoValue": "Reading value",
+  "ui.position.wifi": "Wi-Fi indicator",
+  "ui.weatherTest.current": "Current weather display style.",
+  "ui.display.autoShort": "The automatic cycle is running normally.",
+  "ui.weatherTest.connectionError": "Could not connect to the weather module: {error}",
+  "ui.weatherTest.sendError": "Test error: {error}"
 }
