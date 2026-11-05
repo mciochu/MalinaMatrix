@@ -1420,7 +1420,7 @@ function positionEditor(){
 }
 function control(f){
  if(f.kind==='boolean')return '<select class="config-input"><option value="true">'+tr('config.enabled')+'</option><option value="false">'+tr('config.disabled')+'</option></select>';
- if(f.choices)return '<select class="config-input">'+f.choices.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select>';
+ if(f.choices)return '<select class="config-input">'+f.choices.map(v=>{const key=v==='icon'?'weather.icon':(v==='letters'?'weather.letters':null);return '<option value="'+esc(v)+'">'+esc(key?tr(key):v)+'</option>';}).join('')+'</select>';
  return '<input class="config-input" type="'+(['integer','number'].includes(f.kind)?'number':'text')+'" '+(f.kind==='number'?'step="any"':'')+' value="'+esc(f.value)+'">';
 }
 function rowMarkup(f){
