@@ -1098,6 +1098,12 @@ window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,p
             const toggle = document.getElementById('weather-preview-toggle');
             const status = document.getElementById('weather-preview-status');
             let enabled = false;
+            const tr=(key,params)=>window.MalinaI18n?.t(key,params)||key;
+            function updateStatus(){
+                toggle.textContent=enabled?tr('ui.weatherTest.disable'):tr('ui.weatherTest.enable');
+                status.textContent=enabled?tr('ui.weatherTest.enabled'):tr('ui.weatherTest.disabled');
+            }
+            window.addEventListener('malina:languagechange',updateStatus);
             function updateInput() {
                 const live = kind.value === 'live';
                 percent.disabled = live || kind.value === 'none';
@@ -1115,8 +1121,7 @@ window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,p
                 enabled = !!data.preview.enabled;
                 toggle.classList.toggle('active', enabled);
                 toggle.setAttribute('aria-pressed', String(enabled));
-                toggle.textContent = enabled ? 'Wyłącz test' : 'Włącz test';
-                status.textContent = enabled ? 'Test opadów aktywny na matrycy.' : 'Test wyłączony — wyświetlane są dane pogodowe.';
+                updateStatus();
             }
             async function load() {
                 try {
@@ -1129,12 +1134,11 @@ window.MalinaI18n={t:(key,params)=>interpolate((dictionaries.pl||{})[key]||key,p
                     updateInput();
                     toggle.classList.toggle('active', enabled);
                     toggle.setAttribute('aria-pressed', String(enabled));
-                    toggle.textContent = enabled ? 'Wyłącz test' : 'Włącz test';
-                    status.textContent = enabled ? 'Test opadów aktywny na matrycy.' : 'Test wyłączony — wyświetlane są dane pogodowe.';
-                } catch (error) { status.textContent = 'Brak połączenia z modułem pogody: '+error.message; }
+                    updateStatus();
+                } catch (error) { status.textContent = tr('ui.weatherTest.connectionError',{error:error.message}); }
             }
             kind.addEventListener('change', updateInput);
-            toggle.addEventListener('click', () => { enabled = !enabled; send().catch(e => { enabled = !enabled; status.textContent = 'Błąd testu: '+e.message; }); });
+            toggle.addEventListener('click', () => { enabled = !enabled; send().catch(e => { enabled = !enabled; status.textContent = tr('ui.weatherTest.sendError',{error:e.message}); }); });
             load();
         })();
 
