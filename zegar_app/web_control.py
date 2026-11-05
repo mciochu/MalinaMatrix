@@ -70,6 +70,44 @@ def _config_kind(value):
  if re.fullmatch(r"-?\d+",v):return "integer"
  if re.fullmatch(r"-?(?:\d+\.\d*|\d*\.\d+)",v):return "number"
  return "text"
+def _clock_layout_width(parser):
+ # Use the same glyph advances as the configured BDF clock font so the
+ # editor's selection box follows the real clock width (including seconds).
+ show_seconds = parser.getboolean("clock", "show_seconds", fallback=False)
+ sample = "00:00:00" if show_seconds else "00:00"
+ spec = parser.get("fonts", "day", fallback="BUILTIN:LCD_FONT").strip()
+ if spec.upper().startswith("BUILTIN:"):
+  builtin = spec.split(":", 1)[1].upper()
+  advance = 3 if builtin == "TINY_FONT" else 6
+  return min(64, len(sample) * advance)
+ font_path = Path(spec).expanduser()
+ if not font_path.is_absolute():
+  font_path = _CONFIG_PATH.parent / font_path
+ if font_path.suffix.lower() != ".bdf" or not font_path.is_file():
+  return min(64, len(sample) * 6)
+ advances = {}
+ try:
+  lines = font_path.read_text(encoding="ascii").splitlines()
+  i = 0
+  while i < len(lines):
+   if lines[i].startswith("STARTCHAR "):
+    encoding = advance = None
+    i += 1
+    while i < len(lines) and lines[i] != "ENDCHAR":
+     if lines[i].startswith("ENCODING "):
+      encoding = int(lines[i].split()[1])
+     elif lines[i].startswith("DWIDTH "):
+      advance = int(lines[i].split()[1])
+     i += 1
+    if encoding is not None and advance is not None:
+     advances[encoding] = max(1, advance)
+   i += 1
+  width = sum(advances.get(ord(char), 4) for char in sample)
+  return max(1, min(64, width))
+ except (OSError, UnicodeError, ValueError):
+  return min(64, len(sample) * 6)
+
+
 def _config_payload():
  p=_config_parser()
  definitions=[
@@ -98,7 +136,7 @@ def _config_payload():
     kind=_config_kind(value); choices=["icon","letters"] if (section,key)==("weather","display_style") else None
     fields.append({"section":section,"key":key,"label":labels.get(key,key.replace("_"," ").capitalize()),"value":value,"kind":kind,"live":(section,key) in _LIVE_KEYS,"choices":choices})
   groups.append({"id":gid,"label":title,"fields":fields})
- return {"path":str(_CONFIG_PATH),"width":64,"height":8,"groups":groups}
+ return {"path":str(_CONFIG_PATH),"width":64,"height":8,"clock_width":_clock_layout_width(p),"groups":groups}
 def _save_config_value(section,key,value):
  global _weather_display_style
  if not isinstance(section,str) or not isinstance(key,str) or not re.fullmatch(r"[a-zA-Z0-9_.-]+",section) or not re.fullmatch(r"[a-zA-Z0-9_.-]+",key):raise ValueError("Nieprawidłowa nazwa ustawienia")
