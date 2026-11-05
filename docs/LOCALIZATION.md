@@ -7,10 +7,11 @@ The browser dashboard uses a small, dependency-free localization layer. The disp
 - `web/config/languages.json` — supported languages, default/fallback language, locale file paths and browser storage key.
 - `web/locales/pl.json` — Polish dictionary.
 - `web/locales/en.json` — English dictionary.
-- `web/i18n.js` — browser language selector, dictionary loading, persistence and DOM translation.
+- `web/i18n.js` and the embedded runtime in `web/index.html` — browser language selector, dictionary loading, persistence, dynamic DOM translation and configuration-panel refresh.
+- `scripts/validate-locales.py` — checks all 89 settings in `zegar.conf.example` have labels in every configured language, in addition to dictionary and placeholder consistency.
 - `zegar_app/web_control.py` — serves an allowlisted set of localization JSON files from the existing HTTP API under `/i18n/`.
 
-The language selector is inserted into the dashboard header. The selected language is saved in browser local storage, so it remains selected after refresh. A clean browser profile uses the configured default language. The physical Malina installation keeps Polish as its default.
+The language selector is inserted into the dashboard header. The selected language is saved in browser local storage, so it remains selected after refresh. A clean browser profile uses the configured default language. The physical Malina installation keeps Polish as its default. Dashboard text added dynamically (including status messages, precipitation tests, configuration groups, all configuration fields and the matrix-position editor) follows the selected language without reloading the clock service. Search also uses translated setting labels.
 
 ## Add another language
 
@@ -24,7 +25,7 @@ Set `defaultLanguage` to change the language used by new browser profiles. Keep 
 
 ## Validation
 
-The normal project check runs the locale validator as part of `./scripts/check.sh`. The validator checks JSON syntax, configured language codes, matching dictionary keys, matching interpolation placeholders and literal translation-key references in the dashboard scripts.
+The normal project check runs the locale validator as part of `./scripts/check.sh`. The validator checks JSON syntax, configured language codes, matching dictionary keys, matching interpolation placeholders, literal translation-key references, required dashboard UI keys and a translated label for every option in `zegar.conf.example`.
 
 ## Scope
 
