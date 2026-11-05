@@ -235,5 +235,17 @@
   "config.field.network.probe_interval_seconds": "Odstęp sprawdzania połączenia (s)",
   "config.field.web.host": "Adres nasłuchu serwera WWW",
   "config.field.web.port": "Port serwera WWW",
-  "config.field.web.message_duration_seconds": "Domyślny czas wiadomości (s)"
+  "config.field.web.message_duration_seconds": "Domyślny czas wiadomości (s)",
+  "ui.position.clock": "Zegar dzienny",
+  "ui.position.weather": "Ikona pogody",
+  "ui.position.temperature": "Temperatura",
+  "ui.position.precipitationIcon": "Ikona opadów",
+  "ui.position.precipitationBar": "Pasek opadów",
+  "ui.position.graph": "Wykresy",
+  "ui.position.infoValue": "Wartość pomiaru",
+  "ui.position.wifi": "Wskaźnik Wi-Fi",
+  "ui.weatherTest.current": "Aktualny wygląd planszy pogody.",
+  "ui.display.autoShort": "Automatyczny cykl działa normalnie.",
+  "ui.weatherTest.connectionError": "Brak połączenia z modułem pogody: {error}",
+  "ui.weatherTest.sendError": "Błąd testu: {error}"
 }
