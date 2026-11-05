@@ -249,5 +249,6 @@
   "ui.weatherTest.connectionError": "Brak połączenia z modułem pogody: {error}",
   "ui.weatherTest.sendError": "Błąd testu: {error}",
   "ui.weatherTest.rain": "Deszcz",
-  "ui.weatherTest.probabilityHint": "Ustaw prawdopodobieństwo opadów od 0 do 100%."
+  "ui.weatherTest.probabilityHint": "Ustaw prawdopodobieństwo opadów od 0 do 100%.",
+  "ui.weatherTest.probabilityAria": "Prawdopodobieństwo opadów w procentach"
 }
