@@ -247,5 +247,7 @@
   "ui.weatherTest.current": "Current weather display style.",
   "ui.display.autoShort": "The automatic cycle is running normally.",
   "ui.weatherTest.connectionError": "Could not connect to the weather module: {error}",
-  "ui.weatherTest.sendError": "Test error: {error}"
+  "ui.weatherTest.sendError": "Test error: {error}",
+  "ui.weatherTest.rain": "Rain",
+  "ui.weatherTest.probabilityHint": "Set precipitation probability from 0 to 100%."
 }
