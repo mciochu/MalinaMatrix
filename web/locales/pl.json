@@ -250,5 +250,20 @@
   "ui.weatherTest.sendError": "Błąd testu: {error}",
   "ui.weatherTest.rain": "Deszcz",
   "ui.weatherTest.probabilityHint": "Ustaw prawdopodobieństwo opadów od 0 do 100%.",
-  "ui.weatherTest.probabilityAria": "Prawdopodobieństwo opadów w procentach"
+  "ui.weatherTest.probabilityAria": "Prawdopodobieństwo opadów w procentach",
+  "api.error.invalidSettingName": "Nieprawidłowa nazwa ustawienia",
+  "api.error.invalidValue": "Nieprawidłowa wartość",
+  "api.error.valueTooLong": "Wartość jest za długa lub zawiera niedozwolone znaki",
+  "api.error.unknownSetting": "Nieznane ustawienie",
+  "api.error.booleanRequired": "Wymagana wartość tak/nie",
+  "api.error.integerRequired": "Wymagana liczba całkowita",
+  "api.error.numberRequired": "Wymagana liczba",
+  "api.error.outOfRange": "Liczba poza zakresem",
+  "api.error.weatherStyle": "Dozwolone: icon lub letters",
+  "api.error.coordinateInteger": "Współrzędna musi być liczbą całkowitą",
+  "api.error.coordinateRange": "Dozwolony zakres: {range}",
+  "api.error.screenOrder": "Nieprawidłowa kolejność ekranów",
+  "api.error.sensorDriver": "Nieznany sterownik czujnika",
+  "api.error.requestSize": "Nieprawidłowy rozmiar żądania",
+  "api.error.jsonObject": "Oczekiwano obiektu JSON"
 }
