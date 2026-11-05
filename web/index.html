@@ -1461,11 +1461,13 @@ function drawPositionMap(){
   ctx.setLineDash(active?[]:[3,3]);ctx.strokeRect(x1+.5,y1+.5,x2-x1-1,y2-y1-1);ctx.setLineDash([]);
  });
  const item=positionItems.find(i=>i.id===selected),fx=getField(item.x),fy=getField(item.y);
- document.getElementById('position-x').value=fx.value;document.getElementById('position-y').value=fy.value;
+ const xInput=document.getElementById('position-x'),yInput=document.getElementById('position-y');
+ xInput.min='0';xInput.max=String(Math.max(0,64-item.w));xInput.value=fx.value;
+ yInput.min=String(item.baseline?6:0);yInput.max=String(item.baseline?7:Math.max(0,8-item.h));yInput.value=fy.value;
 }
 async function setPosition(item,x,y){
  const fx=getField(item.x),fy=getField(item.y),status=document.getElementById('position-status');
- const maxX=item.id==='precipitation_icon'?54:Math.max(0,64-item.w),minY=item.baseline?6:0,maxY=item.baseline?7:Math.max(0,8-item.h);
+ const maxX=Math.max(0,64-item.w),minY=item.baseline?6:0,maxY=item.baseline?7:Math.max(0,8-item.h);
  x=Math.max(0,Math.min(maxX,Math.round(Number(x)||0)));
  y=Math.max(minY,Math.min(maxY,Math.round(Number(y)||0)));
  const oldX=fx.value,oldY=fy.value;fx.value=String(x);fy.value=String(y);drawPositionMap();
