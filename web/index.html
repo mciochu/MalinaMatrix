@@ -1391,7 +1391,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 const api='http://'+location.hostname+':8088/config';
 const root=document.getElementById('config-groups'),summary=document.getElementById('config-summary');
 const search=document.getElementById('config-search'),reload=document.getElementById('config-reload'),expand=document.getElementById('config-expand');
-let config=null,selected='weather_icon',layoutFields={},groupData=[];
+let config=null,selected='clock',layoutFields={},groupData=[];
 let clockWidth=18;
 const positionItems=[
  {id:'clock',label:'Zegar dzienny',x:'clock_offset_x',y:'clock_offset_y',w:clockWidth,h:8,clock:true},
