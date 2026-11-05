@@ -1396,6 +1396,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 const api='http://'+location.hostname+':8088/config';
 const tr=(key,params)=>window.MalinaI18n?.t(key,params)||key;
 const translated=(key,fallback)=>{const value=tr(key);return value===key?fallback:value;};
+const apiErrorKeys={'Nieprawidłowa nazwa ustawienia':'api.error.invalidSettingName','Nieprawidłowa wartość':'api.error.invalidValue','Wartość jest za długa lub zawiera niedozwolone znaki':'api.error.valueTooLong','Nieznane ustawienie':'api.error.unknownSetting','Wymagana wartość tak/nie':'api.error.booleanRequired','Wymagana liczba całkowita':'api.error.integerRequired','Wymagana liczba':'api.error.numberRequired','Liczba poza zakresem':'api.error.outOfRange','Dozwolone: icon lub letters':'api.error.weatherStyle','Współrzędna musi być liczbą całkowitą':'api.error.coordinateInteger','Nieprawidłowa kolejność ekranów':'api.error.screenOrder','Nieznany sterownik czujnika':'api.error.sensorDriver','Nieprawidłowy rozmiar żądania':'api.error.requestSize','Oczekiwano obiektu JSON':'api.error.jsonObject'};
+const translateApiError=message=>{const key=apiErrorKeys[message];if(key)return tr(key);const range=String(message).match(/^Dozwolony zakres: (.+)$/);return range?tr('api.error.coordinateRange',{range:range[1]}):message;};
 const root=document.getElementById('config-groups'),summary=document.getElementById('config-summary');
 const search=document.getElementById('config-search'),reload=document.getElementById('config-reload'),expand=document.getElementById('config-expand');
 let config=null,selected='clock',layoutFields={},groupData=[];
@@ -1434,7 +1436,7 @@ async function saveField(f,value,state,input){
   state.className='config-save-state ok';state.textContent=tr(result.live?'config.savedLive':'config.savedRestart');
   summary.textContent=tr('config.savedIn',{path:config.path});
   return true;
- }catch(e){state.className='config-save-state err';state.textContent=tr('config.saveError',{error:e.message});return false;}
+ }catch(e){state.className='config-save-state err';state.textContent=tr('config.saveError',{error:translateApiError(e.message)});return false;}
 }
 function drawPositionMap(){
  const canvas=document.getElementById('position-canvas');if(!canvas)return;
@@ -1563,7 +1565,7 @@ function render(){
  summary.textContent=tr('config.count',{count,groups:config.groups.length})+' · '+config.path;
  applySearch();
 }
-async function load(){summary.textContent=tr('config.loading');reload.disabled=true;try{config=await request();clockWidth=Math.max(1,Math.min(64,Number(config.clock_width)||18));const clockItem=positionItems.find(i=>i.id==='clock');clockItem.w=clockWidth;render();}catch(e){summary.textContent=tr('config.loadError',{error:e.message});}finally{reload.disabled=false;}}
+async function load(){summary.textContent=tr('config.loading');reload.disabled=true;try{config=await request();clockWidth=Math.max(1,Math.min(64,Number(config.clock_width)||18));const clockItem=positionItems.find(i=>i.id==='clock');clockItem.w=clockWidth;render();}catch(e){summary.textContent=tr('config.loadError',{error:translateApiError(e.message)});}finally{reload.disabled=false;}}
 search.addEventListener('input',applySearch);reload.addEventListener('click',load);
 expand.addEventListener('click',()=>{const all=[...root.querySelectorAll('.config-group')],open=all.some(x=>!x.open);all.forEach(x=>{x.open=open;if(open&&x.dataset.rendered!=='1'){const g=groupData.find(a=>a.details===x).group;renderGroup(g,x);}});expand.textContent=tr(open?'config.collapse':'config.expand');});
 load();
