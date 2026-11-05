@@ -1391,7 +1391,9 @@ const api='http://'+location.hostname+':8088/config';
 const root=document.getElementById('config-groups'),summary=document.getElementById('config-summary');
 const search=document.getElementById('config-search'),reload=document.getElementById('config-reload'),expand=document.getElementById('config-expand');
 let config=null,selected='weather_icon',layoutFields={},groupData=[];
+let clockWidth=18;
 const positionItems=[
+ {id:'clock',label:'Zegar',x:'clock_offset_x',y:'clock_offset_y',w:clockWidth,h:8,clock:true},
  {id:'weather_icon',label:'Ikona pogody',x:'weather_icon_x',y:'weather_icon_y',w:8,h:8},
  {id:'temperature',label:'Temperatura',x:'temperature_x',y:'temperature_y',w:13,h:5},
  {id:'precipitation_icon',label:'Ikona opadów',x:'precipitation_icon_x',y:'precipitation_icon_y',w:8,h:6},
@@ -1405,7 +1407,7 @@ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 async function request(options){const r=await fetch(api,{cache:'no-store',...options});const d=await r.json();if(!r.ok)throw new Error(d.error||'HTTP '+r.status);return d;}
 function getField(key){return layoutFields[key];}
 function positionEditor(){
- return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu.</div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
+ return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu. Zegar zachowuje dotychczasowy font i animację; przy krawędzi może być częściowo przycięty.</div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
 }
 function control(f){
  if(f.kind==='boolean')return '<select class="config-input"><option value="true">Włączone</option><option value="false">Wyłączone</option></select>';
@@ -1450,7 +1452,9 @@ function drawPositionMap(){
  // Granice elementów: nie zasłaniamy siatki jednolitymi prostokątami.
  positionItems.forEach(item=>{
   const fx=getField(item.x),fy=getField(item.y);if(!fx||!fy)return;
-  const x=Number(fx.value),y=Number(fy.value);
+  const rawX=Number(fx.value),rawY=Number(fy.value);
+  const x=item.clock?Math.max(0,Math.min(64-item.w,rawX)):rawX;
+  const y=item.clock?Math.max(0,Math.min(7,rawY)):rawY;
   const topY=item.baseline?y-item.h+1:y;
   const x1=px(x)-2,x2=px(Math.min(63,x+item.w-1))+led+2;
   const y1=py(Math.max(0,topY))-2,y2=py(Math.min(7,topY+item.h-1))+led+2;
@@ -1462,12 +1466,12 @@ function drawPositionMap(){
  });
  const item=positionItems.find(i=>i.id===selected),fx=getField(item.x),fy=getField(item.y);
  const xInput=document.getElementById('position-x'),yInput=document.getElementById('position-y');
- xInput.min='0';xInput.max=String(Math.max(0,64-item.w));xInput.value=fx.value;
- yInput.min=String(item.baseline?6:0);yInput.max=String(item.baseline?7:Math.max(0,8-item.h));yInput.value=fy.value;
+ xInput.min='0';xInput.max=String(Math.max(0,64-item.w));xInput.value=item.clock?String(Math.max(0,Math.min(64-item.w,Number(fx.value)||0))):fx.value;
+ yInput.min=String(item.baseline?6:0);yInput.max=String(item.clock?7:(item.baseline?7:Math.max(0,8-item.h)));yInput.value=item.clock?String(Math.max(0,Math.min(7,Number(fy.value)||0))):fy.value;
 }
 async function setPosition(item,x,y){
  const fx=getField(item.x),fy=getField(item.y),status=document.getElementById('position-status');
- const maxX=Math.max(0,64-item.w),minY=item.baseline?6:0,maxY=item.baseline?7:Math.max(0,8-item.h);
+ const maxX=Math.max(0,64-item.w),minY=item.baseline?6:0,maxY=item.clock?7:(item.baseline?7:Math.max(0,8-item.h));
  x=Math.max(0,Math.min(maxX,Math.round(Number(x)||0)));
  y=Math.max(minY,Math.min(maxY,Math.round(Number(y)||0)));
  const oldX=fx.value,oldY=fy.value;fx.value=String(x);fy.value=String(y);drawPositionMap();
@@ -1499,11 +1503,11 @@ function bindPositionEditor(){
 }
 function renderGroup(group,details,query=''){
  const body=details.querySelector('.config-fields');if(details.dataset.rendered==='1'&&!query)return;
- const fields=group.fields.filter(f=>group.id==='layout'?(f.key.startsWith('clock_offset_')):true).filter(f=>!query||(f.section+' '+f.key+' '+(f.label||'')).toLowerCase().includes(query));
+ const fields=group.fields.filter(f=>group.id==='layout'?!f.key.startsWith('clock_offset_'):true).filter(f=>!query||(f.section+' '+f.key+' '+(f.label||'')).toLowerCase().includes(query));
  let html=group.id==='layout'?positionEditor():'';
  html+=fields.map(rowMarkup).join('');
  body.innerHTML=html;details.dataset.rendered='1';
- group.fields.filter(f=>group.id==='layout'?f.key.startsWith('clock_offset_'):true).forEach(f=>{
+ group.fields.filter(f=>group.id==='layout'?!f.key.startsWith('clock_offset_'):true).forEach(f=>{
   const rows=[...body.querySelectorAll('.config-field')],row=rows.find(r=>r.dataset.search.includes((f.section+' '+f.key+' '+(f.label||'')).toLowerCase()));
   if(!row)return;const input=row.querySelector('.config-input'),state=row.querySelector('.config-save-state');input.value=f.value==='yes'?'true':f.value==='no'?'false':f.value;
   input.addEventListener('change',()=>saveField(f,input.value,state,input));
@@ -1534,7 +1538,7 @@ function render(){
  summary.textContent=count+' ustawień · 5 grup · '+config.path;
  applySearch();
 }
-async function load(){summary.textContent='Wczytuję konfigurację…';reload.disabled=true;try{config=await request();render();}catch(e){summary.textContent='Nie udało się wczytać: '+e.message;}finally{reload.disabled=false;}}
+async function load(){summary.textContent='Wczytuję konfigurację…';reload.disabled=true;try{config=await request();clockWidth=Math.max(1,Math.min(64,Number(config.clock_width)||18));const clockItem=positionItems.find(i=>i.id==='clock');clockItem.w=clockWidth;render();}catch(e){summary.textContent='Nie udało się wczytać: '+e.message;}finally{reload.disabled=false;}}
 search.addEventListener('input',applySearch);reload.addEventListener('click',load);
 expand.addEventListener('click',()=>{const all=[...root.querySelectorAll('.config-group')],open=all.some(x=>!x.open);all.forEach(x=>{x.open=open;if(open&&x.dataset.rendered!=='1'){const g=groupData.find(a=>a.details===x).group;renderGroup(g,x);}});expand.textContent=open?'Zwiń wszystko':'Rozwiń wszystko';});
 load();
