@@ -1393,7 +1393,7 @@ const search=document.getElementById('config-search'),reload=document.getElement
 let config=null,selected='weather_icon',layoutFields={},groupData=[];
 let clockWidth=18;
 const positionItems=[
- {id:'clock',label:'Zegar',x:'clock_offset_x',y:'clock_offset_y',w:clockWidth,h:8,clock:true},
+ {id:'clock',label:'Zegar dzienny',x:'clock_offset_x',y:'clock_offset_y',w:clockWidth,h:8,clock:true},
  {id:'weather_icon',label:'Ikona pogody',x:'weather_icon_x',y:'weather_icon_y',w:8,h:8},
  {id:'temperature',label:'Temperatura',x:'temperature_x',y:'temperature_y',w:13,h:5},
  {id:'precipitation_icon',label:'Ikona opadów',x:'precipitation_icon_x',y:'precipitation_icon_y',w:8,h:6},
@@ -1407,7 +1407,7 @@ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 async function request(options){const r=await fetch(api,{cache:'no-store',...options});const d=await r.json();if(!r.ok)throw new Error(d.error||'HTTP '+r.status);return d;}
 function getField(key){return layoutFields[key];}
 function positionEditor(){
- return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu. Zegar zachowuje dotychczasowy font i animację; przy krawędzi może być częściowo przycięty.</div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
+ return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu. Pozycja dotyczy zegara dziennego; nocny zegar pozostaje wyśrodkowany. Font i animacja zegara dziennego pozostają bez zmian; przy krawędzi tekst może być częściowo przycięty.</div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
 }
 function control(f){
  if(f.kind==='boolean')return '<select class="config-input"><option value="true">Włączone</option><option value="false">Wyłączone</option></select>';
