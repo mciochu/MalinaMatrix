@@ -88,6 +88,7 @@
         .position-canvas-wrap { width:100%; min-width:0; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; border:1px solid #33435d; border-radius:9px; background:#07101d; padding:8px; }
         #position-canvas { display:block; width:678px; max-width:none; height:110px; touch-action:pan-x pan-y; cursor:crosshair; }
         .position-foot { margin-top:7px; color:var(--muted); font-size:.67rem; }
+        .position-warning { color:#ffd39a; }
         .config-field[hidden],.config-group[hidden] { display:none !important; }
         @media(max-width:650px){.config-toolbar{grid-template-columns:minmax(0,1fr) auto}.config-toolbar .config-action:last-of-type{grid-column:2}.config-search{grid-column:1/-1}.config-field{grid-template-columns:minmax(0,1fr) minmax(112px,42%);gap:7px;padding:9px 0}.config-input{min-height:42px}.config-fields{padding:0 11px 10px}.config-group summary{padding:13px}.position-editor{padding:10px}.position-tools{grid-template-columns:minmax(0,1fr) 58px 58px}}
 
@@ -1407,7 +1408,7 @@ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 async function request(options){const r=await fetch(api,{cache:'no-store',...options});const d=await r.json();if(!r.ok)throw new Error(d.error||'HTTP '+r.status);return d;}
 function getField(key){return layoutFields[key];}
 function positionEditor(){
- return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu. Pozycja dotyczy zegara dziennego; nocny zegar pozostaje wyśrodkowany. Font i animacja zegara dziennego pozostają bez zmian; przy krawędzi tekst może być częściowo przycięty.</div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
+ return '<div class="position-editor"><h3>Rozmieszczenie na matrycy 64 × 8</h3><p class="position-help">Wybierz element i kliknij jego nowe miejsce na siatce. Możesz też wpisać dokładne współrzędne X/Y. Zapis następuje automatycznie.</p><div class="position-tools"><label>Element<select id="position-select">'+positionItems.map(i=>'<option value="'+i.id+'">'+i.label+'</option>').join('')+'</select></label><label>X<input id="position-x" type="number" min="0" max="63"></label><label>Y<input id="position-y" type="number" min="0" max="7"></label></div><div class="position-canvas-wrap"><canvas id="position-canvas" width="678" height="110" aria-label="Fizyczny podgląd ośmiu modułów LED 8 na 8, razem 64 na 8 pikseli"></canvas></div><div class="position-foot">8 modułów 8×8 ułożonych poziomo. Każda świecąca kropka to jeden fizyczny LED; pionowe przerwy oznaczają łączenia modułów. Podświetlony obrys pokazuje obszar elementu. Pozycja dotyczy zegara dziennego; nocny zegar pozostaje wyśrodkowany. Font i animacja zegara dziennego pozostają bez zmian; przy krawędzi tekst może być częściowo przycięty.</div><div id="position-warning" class="position-foot" aria-live="polite"></div><div id="position-status" class="config-save-state" aria-live="polite"></div></div>';
 }
 function control(f){
  if(f.kind==='boolean')return '<select class="config-input"><option value="true">Włączone</option><option value="false">Wyłączone</option></select>';
@@ -1465,6 +1466,22 @@ function drawPositionMap(){
   ctx.setLineDash(active?[]:[3,3]);ctx.strokeRect(x1+.5,y1+.5,x2-x1-1,y2-y1-1);ctx.setLineDash([]);
  });
  const item=positionItems.find(i=>i.id===selected),fx=getField(item.x),fy=getField(item.y);
+ const rectFor=candidate=>{
+  const xField=getField(candidate.x),yField=getField(candidate.y);
+  const rawX=Number(xField.value)||0,rawY=Number(yField.value)||0;
+  const x=candidate.clock?Math.max(0,Math.min(64-candidate.w,rawX)):rawX;
+  const y=candidate.clock?Math.max(0,Math.min(7,rawY)):rawY;
+  const topY=candidate.baseline?y-candidate.h+1:y;
+  return {left:x,right:Math.min(63,x+candidate.w-1),top:Math.max(0,topY),bottom:Math.min(7,topY+candidate.h-1)};
+ };
+ const selectedRect=rectFor(item);
+ const overlaps=positionItems.filter(other=>other!==item).filter(other=>{
+  const r=rectFor(other);
+  return selectedRect.left<=r.right&&selectedRect.right>=r.left&&selectedRect.top<=r.bottom&&selectedRect.bottom>=r.top;
+ });
+ const warning=document.getElementById('position-warning');
+ warning.textContent=overlaps.length?'Uwaga: obszar nachodzi na: '+overlaps.map(other=>other.label).join(', ')+'.':'Brak kolizji z pozostałymi elementami.';
+ warning.className='position-foot'+(overlaps.length?' position-warning':'');
  const xInput=document.getElementById('position-x'),yInput=document.getElementById('position-y');
  xInput.min='0';xInput.max=String(Math.max(0,64-item.w));xInput.value=item.clock?String(Math.max(0,Math.min(64-item.w,Number(fx.value)||0))):fx.value;
  yInput.min=String(item.baseline?6:0);yInput.max=String(item.clock?7:(item.baseline?7:Math.max(0,8-item.h)));yInput.value=item.clock?String(Math.max(0,Math.min(7,Number(fy.value)||0))):fy.value;
