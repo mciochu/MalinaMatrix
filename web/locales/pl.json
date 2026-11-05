@@ -247,5 +247,7 @@
   "ui.weatherTest.current": "Aktualny wygląd planszy pogody.",
   "ui.display.autoShort": "Automatyczny cykl działa normalnie.",
   "ui.weatherTest.connectionError": "Brak połączenia z modułem pogody: {error}",
-  "ui.weatherTest.sendError": "Błąd testu: {error}"
+  "ui.weatherTest.sendError": "Błąd testu: {error}",
+  "ui.weatherTest.rain": "Deszcz",
+  "ui.weatherTest.probabilityHint": "Ustaw prawdopodobieństwo opadów od 0 do 100%."
 }
